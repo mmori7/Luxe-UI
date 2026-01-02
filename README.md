@@ -15,13 +15,13 @@ A beautiful, production-ready SwiftUI component library featuring the most advan
 
 ##  Why LuxeUI?
 
-- ** Refractive Glass Effects** - Real lens warping, not just blur
-- ** Intelligent Interactions** - Magnetic pull, smart springs, predictive layouts
-- ** Theme System** - Global design tokens that flow to all components
-- **️ Smooth Animations** - 60 FPS physics-based motion
-- ** Zero Dependencies** - Pure SwiftUI, no external frameworks
-- ** Cross-Platform** - Works on macOS 12+ and iOS 15+
-- ** Well Documented** - Every API has examples and guides
+- **Refractive Glass Effects** - Real lens warping, not just blur
+- **Intelligent Interactions** - Magnetic pull, smart springs, predictive layouts
+- **Theme System** - Global design tokens that flow to all components
+- **Smooth Animations** - 60 FPS physics-based motion
+- **Zero Dependencies** - Pure SwiftUI, no external frameworks
+- **Cross-Platform** - Works on macOS 12+ and iOS 15+
+- **Well Documented** - Every API has examples and guides
 
 ##  Features
 
@@ -206,7 +206,7 @@ FloatingOrb(size: 300, color: .purple)
 
 ---
 
-## � **Quick Start**
+## **Quick Start**
 
 ### Swift Package Manager
 
@@ -387,9 +387,6 @@ LuxeUI is built with best practices:
 - ✅ **Type-safe** design tokens
 - ✅ **Sendable** compliance for Swift 6
 
-dependencies: [
-    .package(url: "https://github.com/Ronitsabhaya75/Luxe-UI.git", from: "1.0.0")
-]
 
 ## License
 
