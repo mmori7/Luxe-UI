@@ -1,4 +1,4 @@
-# LuxeUI ✨
+# LuxeUI 
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-iOS%2015%2B%20%7C%20macOS%2012%2B-blue.svg" alt="Platform">
@@ -13,26 +13,26 @@
 
 A beautiful, production-ready SwiftUI component library featuring the most advanced UI effects of 2026. LuxeUI brings premium design to macOS 12+ and iOS 15+, making cutting-edge UI accessible to everyone.
 
-## 🎯 Why LuxeUI?
+##  Why LuxeUI?
 
-- **🔮 Refractive Glass Effects** - Real lens warping, not just blur
-- **🧲 Intelligent Interactions** - Magnetic pull, smart springs, predictive layouts
-- **🎨 Theme System** - Global design tokens that flow to all components
-- **⚡️ Smooth Animations** - 60 FPS physics-based motion
-- **📦 Zero Dependencies** - Pure SwiftUI, no external frameworks
-- **🌍 Cross-Platform** - Works on macOS 12+ and iOS 15+
-- **🎓 Well Documented** - Every API has examples and guides
+- ** Refractive Glass Effects** - Real lens warping, not just blur
+- ** Intelligent Interactions** - Magnetic pull, smart springs, predictive layouts
+- ** Theme System** - Global design tokens that flow to all components
+- **️ Smooth Animations** - 60 FPS physics-based motion
+- ** Zero Dependencies** - Pure SwiftUI, no external frameworks
+- ** Cross-Platform** - Works on macOS 12+ and iOS 15+
+- ** Well Documented** - Every API has examples and guides
 
-## ✨ Features
+##  Features
 
-### 🎨 **Powerful Theme System**
+###  **Powerful Theme System**
 - Global theme injection using `@Environment`
 - 5 preset themes (Default, Midnight, Sunset, Ocean, Monochrome)
 - Fully customizable design tokens (colors, typography, spacing, shadows, animations)
 - Theme flows automatically to all components
 - Real-time theme switching
 
-### 🚀 **Premium Components**
+###  **Premium Components**
 
 #### 1. **LuxeCard** - Floating Glass Cards
 Modern cards with hover effects, shimmer animations, and glassmorphic design.
@@ -58,7 +58,7 @@ LuxeCard {
 - Glowing border effects
 - Smooth spring animations
 
-#### 1.5. **🔮 Refractive Glass** - The 2026 Signature Effect ⭐
+#### 1.5. ** Refractive Glass** - The 2026 Signature Effect ⭐
 Physical lens-warping effect that actually distorts the background like real liquid glass.
 
 ```swift
@@ -88,9 +88,9 @@ RefractiveGlassCard(
 - Chromatic aberration (RGB separation)
 - Multi-layer refractive depth
 - Liquid shimmer animation
-- 🏆 **Can't be easily built by hand** - this is why developers need LuxeUI!
+-  **Can't be easily built by hand** - this is why developers need LuxeUI!
 
-[📖 Read the full Refractive Glass implementation guide](REFRACTIVE_GLASS_GUIDE.md)
+[ Read the full Refractive Glass implementation guide](REFRACTIVE_GLASS_GUIDE.md)
 
 #### 2. **LuxeButton** - Premium Buttons
 Buttons with glass effects, gradients, and haptic feedback.
@@ -189,7 +189,7 @@ FloatingOrb(size: 300, color: .purple)
 
 ---
 
-## 🎨 **Visual Effects**
+##  **Visual Effects**
 
 ### Advanced Animations
 - Spring-based smooth animations
@@ -226,7 +226,7 @@ dependencies: [
 
 ---
 
-## 🚀 **Quick Start**
+##  **Quick Start**
 
 ### 1. Import the package
 
@@ -302,7 +302,7 @@ struct ContentView: View {
 
 ---
 
-## 🎨 **Preset Themes**
+##  **Preset Themes**
 
 - **`.default`** - Blue and purple accents
 - **`.midnight`** - Dark with deep purples ⭐ (Recommended for premium UI)
@@ -332,7 +332,7 @@ ContentView()
 
 ---
 
-## 🤝 **Contributing**
+##  **Contributing**
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
@@ -344,7 +344,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 LuxeUI is available under the MIT license. See [LICENSE](LICENSE) for details.
 
-## 🌟 **Showcase**
+##  **Showcase**
 
 Built something amazing with LuxeUI? We'd love to see it! Share your projects in [GitHub Discussions](https://github.com/yourusername/luxeui/discussions).
 

@@ -247,4 +247,4 @@ RefractiveGlassCard(distortionIntensity: 0.2) {
 
 ---
 
-Ready to build amazing UIs! 🚀✨
+Ready to build amazing UIs! 

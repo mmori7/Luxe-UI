@@ -1,22 +1,22 @@
-# 🔮 Refractive "Liquid Glass" Effect - Implementation Guide
+#  Refractive "Liquid Glass" Effect - Implementation Guide
 
 ## Overview
 
-The **Refractive Liquid Glass** effect is LuxeUI's signature 2026 premium feature. Unlike standard glassmorphism (simple blur), this effect **physically warps and distorts** the background like looking through a real glass lens or water droplet.
+The **Refractive Liquid Glass**effect is LuxeUI's signature 2026 premium feature. Unlike standard glassmorphism (simple blur), this effect **physically warps and distorts**the background like looking through a real glass lens or water droplet.
 
 ## What Makes It Special
 
-### Standard Glassmorphism ❌
+### Standard Glassmorphism 
 - Simple blur effect
 - Static appearance
 - No depth perception
 - Everyone can build it
 
-### Refractive Liquid Glass ✨
-- **Physical lens warping** at edges
-- **Animated caustic patterns** (light refraction)
-- **Chromatic aberration** (RGB channel separation like real prisms)
-- **Multi-layer depth** with parallax
+### Refractive Liquid Glass 
+- **Physical lens warping**at edges
+- **Animated caustic patterns**(light refraction)
+- **Chromatic aberration**(RGB channel separation like real prisms)
+- **Multi-layer depth**with parallax
 - **Animated liquid shimmer**
 - **Theme-aware colors**
 
@@ -114,7 +114,7 @@ AdvancedRefractiveGlass(
 
 ### When to Use Refractive Glass
 
-✅ **Perfect for:**
+ **Perfect for:**
 - Hero cards and featured content
 - Premium feature highlights
 - Dashboard panels
@@ -122,7 +122,7 @@ AdvancedRefractiveGlass(
 - Login/signup screens
 - Settings panels
 
-❌ **Avoid for:**
+ **Avoid for:**
 - List items (too heavy)
 - Rapid scrolling content
 - Very small UI elements
@@ -227,7 +227,7 @@ struct RefractiveGlassDemo: View {
 }
 ```
 
-## Why This Is Open Source Gold 🏆
+## Why This Is Open Source Gold 
 
 1. **Unique Visual Signature**: No other SwiftUI library offers this effect
 2. **Can't Be Easily Built**: Requires understanding of:
@@ -248,4 +248,4 @@ struct RefractiveGlassDemo: View {
 
 ---
 
-**Built with LuxeUI** ✨ | The Premium SwiftUI Component Library
+**Built with LuxeUI**| The Premium SwiftUI Component Library

@@ -1,6 +1,6 @@
 # Contributing to LuxeUI
 
-Thank you for your interest in contributing to LuxeUI! 🎉
+Thank you for your interest in contributing to LuxeUI! 
 
 ## How to Contribute
 
@@ -114,4 +114,4 @@ Open a GitHub Discussion or reach out to the maintainers!
 
 ---
 
-**Remember**: LuxeUI is about creating the most beautiful, premium UI components for 2026 and beyond. Every contribution should raise the bar! ✨
+**Remember**: LuxeUI is about creating the most beautiful, premium UI components for 2026 and beyond. Every contribution should raise the bar! 
