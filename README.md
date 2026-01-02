@@ -58,7 +58,7 @@ LuxeCard {
 - Glowing border effects
 - Smooth spring animations
 
-#### 1.5. ** Refractive Glass** - The 2026 Signature Effect ⭐
+#### 1.5. **Refractive Glass** - The 2026 Signature Effect ⭐
 Physical lens-warping effect that actually distorts the background like real liquid glass.
 
 ```swift
