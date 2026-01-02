@@ -1,255 +1,443 @@
 import SwiftUI
 
-/// A comprehensive theme model that defines the visual design system for LuxeUI components.
-/// This is the core of the theming system - all colors, typography, spacing, and styling come from here.
+// MARK: - Color Scheme
+
+public struct LuxeColorScheme: Sendable {
+    public var primary: Color
+    public var secondary: Color
+    public var accent: Color
+    public var background: Color
+    public var surface: Color
+    public var text: Color
+    public var textSecondary: Color
+    public var success: Color
+    public var warning: Color
+    public var error: Color
+    public var info: Color
+    
+    public init(
+        primary: Color = .blue,
+        secondary: Color = .purple,
+        accent: Color = .cyan,
+        background: Color = Color(red: 0.05, green: 0.05, blue: 0.1),
+        surface: Color = Color(red: 0.1, green: 0.1, blue: 0.15),
+        text: Color = .white,
+        textSecondary: Color = .white.opacity(0.7),
+        success: Color = .green,
+        warning: Color = .orange,
+        error: Color = .red,
+        info: Color = .cyan
+    ) {
+        self.primary = primary
+        self.secondary = secondary
+        self.accent = accent
+        self.background = background
+        self.surface = surface
+        self.text = text
+        self.textSecondary = textSecondary
+        self.success = success
+        self.warning = warning
+        self.error = error
+        self.info = info
+    }
+}
+
+// MARK: - Typography
+
+public struct LuxeTypography: Sendable {
+    public var fontSizeXS: CGFloat
+    public var fontSizeS: CGFloat
+    public var fontSizeM: CGFloat
+    public var fontSizeL: CGFloat
+    public var fontSizeXL: CGFloat
+    public var fontSizeXXL: CGFloat
+    public var fontSizeDisplay: CGFloat
+    public var fontWeightLight: Font.Weight
+    public var fontWeightRegular: Font.Weight
+    public var fontWeightMedium: Font.Weight
+    public var fontWeightSemibold: Font.Weight
+    public var fontWeightBold: Font.Weight
+    public var lineHeightTight: CGFloat
+    public var lineHeightNormal: CGFloat
+    public var lineHeightRelaxed: CGFloat
+    
+    public init(
+        fontSizeXS: CGFloat = 10,
+        fontSizeS: CGFloat = 12,
+        fontSizeM: CGFloat = 14,
+        fontSizeL: CGFloat = 16,
+        fontSizeXL: CGFloat = 20,
+        fontSizeXXL: CGFloat = 24,
+        fontSizeDisplay: CGFloat = 36,
+        fontWeightLight: Font.Weight = .light,
+        fontWeightRegular: Font.Weight = .regular,
+        fontWeightMedium: Font.Weight = .medium,
+        fontWeightSemibold: Font.Weight = .semibold,
+        fontWeightBold: Font.Weight = .bold,
+        lineHeightTight: CGFloat = 1.2,
+        lineHeightNormal: CGFloat = 1.5,
+        lineHeightRelaxed: CGFloat = 1.8
+    ) {
+        self.fontSizeXS = fontSizeXS
+        self.fontSizeS = fontSizeS
+        self.fontSizeM = fontSizeM
+        self.fontSizeL = fontSizeL
+        self.fontSizeXL = fontSizeXL
+        self.fontSizeXXL = fontSizeXXL
+        self.fontSizeDisplay = fontSizeDisplay
+        self.fontWeightLight = fontWeightLight
+        self.fontWeightRegular = fontWeightRegular
+        self.fontWeightMedium = fontWeightMedium
+        self.fontWeightSemibold = fontWeightSemibold
+        self.fontWeightBold = fontWeightBold
+        self.lineHeightTight = lineHeightTight
+        self.lineHeightNormal = lineHeightNormal
+        self.lineHeightRelaxed = lineHeightRelaxed
+    }
+}
+
+// MARK: - Spacing
+
+public struct LuxeSpacing: Sendable {
+    public var xxxs: CGFloat
+    public var xxs: CGFloat
+    public var xs: CGFloat
+    public var s: CGFloat
+    public var m: CGFloat
+    public var l: CGFloat
+    public var xl: CGFloat
+    public var xxl: CGFloat
+    public var xxxl: CGFloat
+    
+    public init(
+        xxxs: CGFloat = 2,
+        xxs: CGFloat = 4,
+        xs: CGFloat = 8,
+        s: CGFloat = 12,
+        m: CGFloat = 16,
+        l: CGFloat = 24,
+        xl: CGFloat = 32,
+        xxl: CGFloat = 48,
+        xxxl: CGFloat = 64
+    ) {
+        self.xxxs = xxxs
+        self.xxs = xxs
+        self.xs = xs
+        self.s = s
+        self.m = m
+        self.l = l
+        self.xl = xl
+        self.xxl = xxl
+        self.xxxl = xxxl
+    }
+}
+
+// MARK: - Border Radius
+
+public struct LuxeBorderRadius: Sendable {
+    public var none: CGFloat
+    public var xs: CGFloat
+    public var s: CGFloat
+    public var m: CGFloat
+    public var l: CGFloat
+    public var xl: CGFloat
+    public var full: CGFloat
+    
+    public init(
+        none: CGFloat = 0,
+        xs: CGFloat = 4,
+        s: CGFloat = 8,
+        m: CGFloat = 12,
+        l: CGFloat = 16,
+        xl: CGFloat = 24,
+        full: CGFloat = 9999
+    ) {
+        self.none = none
+        self.xs = xs
+        self.s = s
+        self.m = m
+        self.l = l
+        self.xl = xl
+        self.full = full
+    }
+}
+
+// MARK: - Effects
+
+public struct LuxeEffects: Sendable {
+    public var shadowSmall: CGFloat
+    public var shadowMedium: CGFloat
+    public var shadowLarge: CGFloat
+    public var shadowXL: CGFloat
+    public var blurSmall: CGFloat
+    public var blurMedium: CGFloat
+    public var blurLarge: CGFloat
+    public var glowSmall: CGFloat
+    public var glowMedium: CGFloat
+    public var glowLarge: CGFloat
+    public var animationFast: Double
+    public var animationNormal: Double
+    public var animationSlow: Double
+    
+    public init(
+        shadowSmall: CGFloat = 4,
+        shadowMedium: CGFloat = 8,
+        shadowLarge: CGFloat = 16,
+        shadowXL: CGFloat = 32,
+        blurSmall: CGFloat = 8,
+        blurMedium: CGFloat = 16,
+        blurLarge: CGFloat = 32,
+        glowSmall: CGFloat = 4,
+        glowMedium: CGFloat = 8,
+        glowLarge: CGFloat = 16,
+        animationFast: Double = 0.15,
+        animationNormal: Double = 0.3,
+        animationSlow: Double = 0.5
+    ) {
+        self.shadowSmall = shadowSmall
+        self.shadowMedium = shadowMedium
+        self.shadowLarge = shadowLarge
+        self.shadowXL = shadowXL
+        self.blurSmall = blurSmall
+        self.blurMedium = blurMedium
+        self.blurLarge = blurLarge
+        self.glowSmall = glowSmall
+        self.glowMedium = glowMedium
+        self.glowLarge = glowLarge
+        self.animationFast = animationFast
+        self.animationNormal = animationNormal
+        self.animationSlow = animationSlow
+    }
+}
+
+// MARK: - Theme
+
 public struct Theme: Sendable {
+    // Color tokens
+    public var primaryColor: Color
+    public var secondaryColor: Color
+    public var accentColor: Color
+    public var backgroundColor: Color
+    public var surfaceColor: Color
+    public var textColor: Color
+    public var textSecondaryColor: Color
     
-    // MARK: - Color Palette
+    // Design system
+    public var colors: LuxeColorScheme
+    public var typography: LuxeTypography
+    public var spacing: LuxeSpacing
+    public var borderRadius: LuxeBorderRadius
+    public var effects: LuxeEffects
     
-    /// Primary brand color used for main actions and emphasis
-    public let primaryColor: Color
-    
-    /// Secondary brand color for supporting elements
-    public let secondaryColor: Color
-    
-    /// Accent color for highlights and calls-to-action
-    public let accentColor: Color
-    
-    /// Background color for main surfaces
-    public let backgroundColor: Color
-    
-    /// Secondary background for cards, containers, etc.
-    public let secondaryBackgroundColor: Color
-    
-    /// Primary text color
-    public let textPrimary: Color
-    
-    /// Secondary text color for less prominent text
-    public let textSecondary: Color
-    
-    /// Tertiary text color for hints and placeholders
-    public let textTertiary: Color
-    
-    /// Error/destructive action color
-    public let errorColor: Color
-    
-    /// Success state color
-    public let successColor: Color
-    
-    /// Warning state color
-    public let warningColor: Color
-    
-    // MARK: - Typography
-    
-    /// Large title font size
-    public let fontSizeLargeTitle: CGFloat
-    
-    /// Title font size
-    public let fontSizeTitle: CGFloat
-    
-    /// Headline font size
-    public let fontSizeHeadline: CGFloat
-    
-    /// Body text font size
-    public let fontSizeBody: CGFloat
-    
-    /// Subheadline font size
-    public let fontSizeSubheadline: CGFloat
-    
-    /// Caption text font size
-    public let fontSizeCaption: CGFloat
-    
-    /// Font weight for regular text
-    public let fontWeightRegular: Font.Weight
-    
-    /// Font weight for medium emphasis
-    public let fontWeightMedium: Font.Weight
-    
-    /// Font weight for bold text
-    public let fontWeightBold: Font.Weight
-    
-    // MARK: - Spacing System
-    
-    /// Extra small spacing (4pt)
-    public let spacingXS: CGFloat
-    
-    /// Small spacing (8pt)
-    public let spacingS: CGFloat
-    
-    /// Medium spacing (16pt)
-    public let spacingM: CGFloat
-    
-    /// Large spacing (24pt)
-    public let spacingL: CGFloat
-    
-    /// Extra large spacing (32pt)
-    public let spacingXL: CGFloat
-    
-    /// Extra extra large spacing (48pt)
-    public let spacingXXL: CGFloat
-    
-    // MARK: - Corner Radius
-    
-    /// Small corner radius for subtle rounding
-    public let cornerRadiusSmall: CGFloat
-    
-    /// Medium corner radius for standard components
-    public let cornerRadiusMedium: CGFloat
-    
-    /// Large corner radius for prominent elements
-    public let cornerRadiusLarge: CGFloat
-    
-    /// Extra large corner radius for very rounded elements
-    public let cornerRadiusXLarge: CGFloat
-    
-    // MARK: - Shadows & Effects
-    
-    /// Shadow radius for subtle elevation
-    public let shadowRadiusSmall: CGFloat
-    
-    /// Shadow radius for medium elevation
-    public let shadowRadiusMedium: CGFloat
-    
-    /// Shadow radius for prominent elevation
-    public let shadowRadiusLarge: CGFloat
-    
-    /// Shadow opacity
-    public let shadowOpacity: Double
-    
-    // MARK: - Animation
-    
-    /// Standard animation duration
-    public let animationDuration: Double
-    
-    /// Animation spring response
-    public let animationSpring: Double
-    
-    // MARK: - Initializer
+    // Legacy support
+    public var fontSizeBody: CGFloat
+    public var fontSizeHeadline: CGFloat
+    public var cornerRadius: CGFloat
+    public var spacingS: CGFloat
+    public var spacingM: CGFloat
+    public var spacingL: CGFloat
+    public var shadowRadius: CGFloat
+    public var animationDuration: Double
+    public var enableHaptics: Bool
     
     public init(
         primaryColor: Color = .blue,
         secondaryColor: Color = .purple,
-        accentColor: Color = .pink,
-        backgroundColor: Color = Color(red: 0.98, green: 0.98, blue: 0.98),
-        secondaryBackgroundColor: Color = Color(red: 0.95, green: 0.95, blue: 0.95),
-        textPrimary: Color = .primary,
-        textSecondary: Color = .secondary,
-        textTertiary: Color = Color.gray.opacity(0.6),
-        errorColor: Color = .red,
-        successColor: Color = .green,
-        warningColor: Color = .orange,
-        fontSizeLargeTitle: CGFloat = 34,
-        fontSizeTitle: CGFloat = 28,
-        fontSizeHeadline: CGFloat = 17,
-        fontSizeBody: CGFloat = 15,
-        fontSizeSubheadline: CGFloat = 13,
-        fontSizeCaption: CGFloat = 11,
-        fontWeightRegular: Font.Weight = .regular,
-        fontWeightMedium: Font.Weight = .medium,
-        fontWeightBold: Font.Weight = .bold,
-        spacingXS: CGFloat = 4,
+        accentColor: Color = .cyan,
+        backgroundColor: Color = Color(red: 0.05, green: 0.05, blue: 0.1),
+        surfaceColor: Color = Color(red: 0.1, green: 0.1, blue: 0.15),
+        textColor: Color = .white,
+        textSecondaryColor: Color = .white.opacity(0.7),
+        colors: LuxeColorScheme? = nil,
+        typography: LuxeTypography = LuxeTypography(),
+        spacing: LuxeSpacing = LuxeSpacing(),
+        borderRadius: LuxeBorderRadius = LuxeBorderRadius(),
+        effects: LuxeEffects = LuxeEffects(),
+        fontSizeBody: CGFloat = 16,
+        fontSizeHeadline: CGFloat = 24,
+        cornerRadius: CGFloat = 16,
         spacingS: CGFloat = 8,
         spacingM: CGFloat = 16,
         spacingL: CGFloat = 24,
-        spacingXL: CGFloat = 32,
-        spacingXXL: CGFloat = 48,
-        cornerRadiusSmall: CGFloat = 4,
-        cornerRadiusMedium: CGFloat = 8,
-        cornerRadiusLarge: CGFloat = 16,
-        cornerRadiusXLarge: CGFloat = 24,
-        shadowRadiusSmall: CGFloat = 2,
-        shadowRadiusMedium: CGFloat = 8,
-        shadowRadiusLarge: CGFloat = 16,
-        shadowOpacity: Double = 0.1,
+        shadowRadius: CGFloat = 10,
         animationDuration: Double = 0.3,
-        animationSpring: Double = 0.6
+        enableHaptics: Bool = true
     ) {
         self.primaryColor = primaryColor
         self.secondaryColor = secondaryColor
         self.accentColor = accentColor
         self.backgroundColor = backgroundColor
-        self.secondaryBackgroundColor = secondaryBackgroundColor
-        self.textPrimary = textPrimary
-        self.textSecondary = textSecondary
-        self.textTertiary = textTertiary
-        self.errorColor = errorColor
-        self.successColor = successColor
-        self.warningColor = warningColor
-        self.fontSizeLargeTitle = fontSizeLargeTitle
-        self.fontSizeTitle = fontSizeTitle
-        self.fontSizeHeadline = fontSizeHeadline
+        self.surfaceColor = surfaceColor
+        self.textColor = textColor
+        self.textSecondaryColor = textSecondaryColor
+        
+        self.colors = colors ?? LuxeColorScheme(
+            primary: primaryColor,
+            secondary: secondaryColor,
+            accent: accentColor,
+            background: backgroundColor,
+            surface: surfaceColor,
+            text: textColor,
+            textSecondary: textSecondaryColor
+        )
+        
+        self.typography = typography
+        self.spacing = spacing
+        self.borderRadius = borderRadius
+        self.effects = effects
+        
         self.fontSizeBody = fontSizeBody
-        self.fontSizeSubheadline = fontSizeSubheadline
-        self.fontSizeCaption = fontSizeCaption
-        self.fontWeightRegular = fontWeightRegular
-        self.fontWeightMedium = fontWeightMedium
-        self.fontWeightBold = fontWeightBold
-        self.spacingXS = spacingXS
+        self.fontSizeHeadline = fontSizeHeadline
+        self.cornerRadius = cornerRadius
         self.spacingS = spacingS
         self.spacingM = spacingM
         self.spacingL = spacingL
-        self.spacingXL = spacingXL
-        self.spacingXXL = spacingXXL
-        self.cornerRadiusSmall = cornerRadiusSmall
-        self.cornerRadiusMedium = cornerRadiusMedium
-        self.cornerRadiusLarge = cornerRadiusLarge
-        self.cornerRadiusXLarge = cornerRadiusXLarge
-        self.shadowRadiusSmall = shadowRadiusSmall
-        self.shadowRadiusMedium = shadowRadiusMedium
-        self.shadowRadiusLarge = shadowRadiusLarge
-        self.shadowOpacity = shadowOpacity
+        self.shadowRadius = shadowRadius
         self.animationDuration = animationDuration
-        self.animationSpring = animationSpring
+        self.enableHaptics = enableHaptics
+    }
+    
+    // MARK: - Preset Themes
+    
+    public static let `default` = Theme()
+    
+    public static let midnight = Theme(
+        primaryColor: Color(red: 0.4, green: 0.2, blue: 0.8),
+        secondaryColor: Color(red: 0.6, green: 0.2, blue: 0.6),
+        accentColor: .cyan,
+        backgroundColor: Color(red: 0.02, green: 0.02, blue: 0.08),
+        surfaceColor: Color(red: 0.08, green: 0.08, blue: 0.15)
+    )
+    
+    public static let sunset = Theme(
+        primaryColor: Color(red: 1.0, green: 0.4, blue: 0.2),
+        secondaryColor: Color(red: 0.9, green: 0.2, blue: 0.4),
+        accentColor: .yellow,
+        backgroundColor: Color(red: 0.1, green: 0.05, blue: 0.05),
+        surfaceColor: Color(red: 0.15, green: 0.08, blue: 0.08)
+    )
+    
+    public static let ocean = Theme(
+        primaryColor: Color(red: 0.0, green: 0.6, blue: 0.8),
+        secondaryColor: Color(red: 0.0, green: 0.4, blue: 0.6),
+        accentColor: .mint,
+        backgroundColor: Color(red: 0.02, green: 0.05, blue: 0.1),
+        surfaceColor: Color(red: 0.05, green: 0.1, blue: 0.15)
+    )
+    
+    public static let forest = Theme(
+        primaryColor: Color(red: 0.2, green: 0.7, blue: 0.4),
+        secondaryColor: Color(red: 0.1, green: 0.5, blue: 0.3),
+        accentColor: .yellow,
+        backgroundColor: Color(red: 0.02, green: 0.08, blue: 0.04),
+        surfaceColor: Color(red: 0.05, green: 0.12, blue: 0.06)
+    )
+    
+    public static let neon = Theme(
+        primaryColor: Color(red: 1.0, green: 0.0, blue: 0.8),
+        secondaryColor: Color(red: 0.0, green: 1.0, blue: 0.8),
+        accentColor: .yellow,
+        backgroundColor: Color(red: 0.02, green: 0.02, blue: 0.05),
+        surfaceColor: Color(red: 0.05, green: 0.05, blue: 0.1)
+    )
+    
+    public static let monochrome = Theme(
+        primaryColor: .white,
+        secondaryColor: .gray,
+        accentColor: .white,
+        backgroundColor: .black,
+        surfaceColor: Color(white: 0.1),
+        textColor: .white,
+        textSecondaryColor: .gray
+    )
+    
+    public static let light = Theme(
+        primaryColor: .blue,
+        secondaryColor: .purple,
+        accentColor: .cyan,
+        backgroundColor: Color(white: 0.95),
+        surfaceColor: .white,
+        textColor: .black,
+        textSecondaryColor: .gray
+    )
+    
+    // MARK: - Builder Pattern
+    
+    public func withPrimaryColor(_ color: Color) -> Theme {
+        var copy = self
+        copy.primaryColor = color
+        copy.colors.primary = color
+        return copy
+    }
+    
+    public func withSecondaryColor(_ color: Color) -> Theme {
+        var copy = self
+        copy.secondaryColor = color
+        copy.colors.secondary = color
+        return copy
+    }
+    
+    public func withAccentColor(_ color: Color) -> Theme {
+        var copy = self
+        copy.accentColor = color
+        copy.colors.accent = color
+        return copy
+    }
+    
+    public func withBackgroundColor(_ color: Color) -> Theme {
+        var copy = self
+        copy.backgroundColor = color
+        copy.colors.background = color
+        return copy
+    }
+    
+    public func withTypography(_ typography: LuxeTypography) -> Theme {
+        var copy = self
+        copy.typography = typography
+        return copy
+    }
+    
+    public func withSpacing(_ spacing: LuxeSpacing) -> Theme {
+        var copy = self
+        copy.spacing = spacing
+        return copy
+    }
+    
+    public func withEffects(_ effects: LuxeEffects) -> Theme {
+        var copy = self
+        copy.effects = effects
+        return copy
+    }
+    
+    public func withHaptics(_ enabled: Bool) -> Theme {
+        var copy = self
+        copy.enableHaptics = enabled
+        return copy
     }
 }
 
-// MARK: - Preset Themes
+// MARK: - Theme Presets Enum
 
-extension Theme {
-    /// Default LuxeUI theme with blue and purple accents
-    public static let `default` = Theme()
+public enum ThemePreset: String, CaseIterable, Sendable {
+    case `default`
+    case midnight
+    case sunset
+    case ocean
+    case forest
+    case neon
+    case monochrome
+    case light
     
-    /// Dark, mysterious theme with deep purples and blacks
-    public static let midnight = Theme(
-        primaryColor: Color(red: 0.4, green: 0.2, blue: 0.8),
-        secondaryColor: Color(red: 0.2, green: 0.1, blue: 0.4),
-        accentColor: Color(red: 0.8, green: 0.4, blue: 1.0),
-        backgroundColor: Color(red: 0.05, green: 0.05, blue: 0.1),
-        secondaryBackgroundColor: Color(red: 0.1, green: 0.1, blue: 0.15),
-        textPrimary: .white,
-        textSecondary: Color.white.opacity(0.7),
-        textTertiary: Color.white.opacity(0.5)
-    )
-    
-    /// Vibrant, energetic theme with warm colors
-    public static let sunset = Theme(
-        primaryColor: Color(red: 1.0, green: 0.4, blue: 0.2),
-        secondaryColor: Color(red: 1.0, green: 0.6, blue: 0.0),
-        accentColor: Color(red: 1.0, green: 0.2, blue: 0.4),
-        backgroundColor: Color(red: 1.0, green: 0.98, blue: 0.95),
-        secondaryBackgroundColor: Color(red: 1.0, green: 0.95, blue: 0.9),
-        textPrimary: Color(red: 0.2, green: 0.1, blue: 0.1),
-        textSecondary: Color(red: 0.4, green: 0.3, blue: 0.3)
-    )
-    
-    /// Clean, modern theme with mint and teal accents
-    public static let ocean = Theme(
-        primaryColor: Color(red: 0.0, green: 0.7, blue: 0.8),
-        secondaryColor: Color(red: 0.0, green: 0.5, blue: 0.6),
-        accentColor: Color(red: 0.2, green: 0.9, blue: 0.7),
-        backgroundColor: Color(red: 0.95, green: 0.98, blue: 1.0),
-        secondaryBackgroundColor: Color(red: 0.9, green: 0.95, blue: 0.98)
-    )
-    
-    /// Monochromatic theme for minimalist designs
-    public static let monochrome = Theme(
-        primaryColor: Color.black,
-        secondaryColor: Color.gray,
-        accentColor: Color(red: 0.3, green: 0.3, blue: 0.3),
-        backgroundColor: .white,
-        secondaryBackgroundColor: Color(red: 0.95, green: 0.95, blue: 0.95),
-        textPrimary: .black,
-        textSecondary: Color.gray,
-        textTertiary: Color.gray.opacity(0.6)
-    )
+    public var theme: Theme {
+        switch self {
+        case .default: return .default
+        case .midnight: return .midnight
+        case .sunset: return .sunset
+        case .ocean: return .ocean
+        case .forest: return .forest
+        case .neon: return .neon
+        case .monochrome: return .monochrome
+        case .light: return .light
+        }
+    }
 }

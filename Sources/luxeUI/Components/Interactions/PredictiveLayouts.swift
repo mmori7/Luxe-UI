@@ -1,327 +1,550 @@
 import SwiftUI
 
-// MARK: - Predictive State-Aware Layout System
+// MARK: - Predictive Layout Configuration
 
-/// A container that adapts its appearance based on probability of user action
-/// The future of 2026 UI - layouts that predict and respond to user intent
-public struct LuxeAdaptiveContainer<Content: View>: View {
-    @Environment(\.luxeTheme) private var theme
-    
-    let content: Content
-    let probabilityOfAction: Double
-    let adaptiveMode: AdaptiveMode
-    
-    @State private var currentScale: CGFloat = 1.0
-    @State private var currentGlow: CGFloat = 0.0
-    @State private var currentElevation: CGFloat = 0.0
-    @State private var priority: CGFloat = 0.0
-    
-    public enum AdaptiveMode {
-        case glow          // Increases glow intensity
-        case scale         // Grows in size
-        case elevate       // Lifts with shadow
-        case prioritize    // Moves toward top (use with sortPriority)
-        case all           // Combines all effects
-    }
+public struct PredictiveLayoutConfiguration: Sendable {
+    public var baseOpacity: Double
+    public var activeOpacity: Double
+    public var baseScale: CGFloat
+    public var activeScale: CGFloat
+    public var baseShadowRadius: CGFloat
+    public var activeShadowRadius: CGFloat
+    public var glowColor: Color
+    public var glowOpacity: Double
+    public var animationResponse: Double
+    public var animationDamping: Double
+    public var probabilityThreshold: Double
+    public var enableGlow: Bool
+    public var enableScale: Bool
+    public var enableElevation: Bool
     
     public init(
-        probabilityOfAction: Double,
-        mode: AdaptiveMode = .all,
+        baseOpacity: Double = 0.7,
+        activeOpacity: Double = 1.0,
+        baseScale: CGFloat = 1.0,
+        activeScale: CGFloat = 1.05,
+        baseShadowRadius: CGFloat = 5,
+        activeShadowRadius: CGFloat = 20,
+        glowColor: Color = .blue,
+        glowOpacity: Double = 0.3,
+        animationResponse: Double = 0.3,
+        animationDamping: Double = 0.7,
+        probabilityThreshold: Double = 0.5,
+        enableGlow: Bool = true,
+        enableScale: Bool = true,
+        enableElevation: Bool = true
+    ) {
+        self.baseOpacity = baseOpacity
+        self.activeOpacity = activeOpacity
+        self.baseScale = baseScale
+        self.activeScale = activeScale
+        self.baseShadowRadius = baseShadowRadius
+        self.activeShadowRadius = activeShadowRadius
+        self.glowColor = glowColor
+        self.glowOpacity = glowOpacity
+        self.animationResponse = animationResponse
+        self.animationDamping = animationDamping
+        self.probabilityThreshold = probabilityThreshold
+        self.enableGlow = enableGlow
+        self.enableScale = enableScale
+        self.enableElevation = enableElevation
+    }
+    
+    public static let `default` = PredictiveLayoutConfiguration()
+    
+    public static let subtle = PredictiveLayoutConfiguration(
+        activeScale: 1.02,
+        activeShadowRadius: 10,
+        glowOpacity: 0.2
+    )
+    
+    public static let prominent = PredictiveLayoutConfiguration(
+        activeScale: 1.08,
+        activeShadowRadius: 30,
+        glowOpacity: 0.5
+    )
+    
+    public static let noAnimation = PredictiveLayoutConfiguration(
+        enableGlow: false,
+        enableScale: false,
+        enableElevation: false
+    )
+}
+
+// MARK: - Adaptive Container
+
+public struct LuxeAdaptiveContainer<Content: View>: View {
+    private let content: Content
+    private let probability: Double
+    private var configuration: PredictiveLayoutConfiguration
+    
+    @Environment(\.luxeTheme) private var theme
+    
+    public init(
+        probability: Double,
+        configuration: PredictiveLayoutConfiguration = .default,
         @ViewBuilder content: () -> Content
     ) {
+        self.probability = probability
+        self.configuration = configuration
         self.content = content()
-        self.probabilityOfAction = max(0.0, min(1.0, probabilityOfAction))
-        self.adaptiveMode = mode
+    }
+    
+    private var interpolatedOpacity: Double {
+        configuration.baseOpacity + (configuration.activeOpacity - configuration.baseOpacity) * probability
+    }
+    
+    private var interpolatedScale: CGFloat {
+        if !configuration.enableScale { return 1.0 }
+        return configuration.baseScale + (configuration.activeScale - configuration.baseScale) * CGFloat(probability)
+    }
+    
+    private var interpolatedShadow: CGFloat {
+        if !configuration.enableElevation { return 0 }
+        return configuration.baseShadowRadius + (configuration.activeShadowRadius - configuration.baseShadowRadius) * CGFloat(probability)
     }
     
     public var body: some View {
         content
-            .scaleEffect(shouldScale ? currentScale : 1.0)
+            .opacity(interpolatedOpacity)
+            .scaleEffect(interpolatedScale)
             .shadow(
-                color: theme.primaryColor.opacity(shouldGlow ? currentGlow * 0.6 : 0),
-                radius: currentGlow * 30,
-                x: 0,
-                y: 0
+                color: configuration.enableGlow && probability > configuration.probabilityThreshold 
+                    ? configuration.glowColor.opacity(configuration.glowOpacity * probability) 
+                    : .clear,
+                radius: interpolatedShadow
             )
-            .shadow(
-                color: .black.opacity(shouldElevate ? 0.3 : 0),
-                radius: currentElevation * 20,
-                x: 0,
-                y: currentElevation * 10
+            .animation(
+                .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+                value: probability
             )
-            .zIndex(shouldPrioritize ? priority : 0)
-            .onChange(of: probabilityOfAction) { newValue in
-                updateAdaptiveState(probability: newValue)
-            }
-            .onAppear {
-                updateAdaptiveState(probability: probabilityOfAction)
-            }
     }
     
-    private var shouldScale: Bool {
-        adaptiveMode == .scale || adaptiveMode == .all
+    // Modifier methods
+    public func glowColor(_ color: Color) -> LuxeAdaptiveContainer {
+        var copy = self
+        copy.configuration.glowColor = color
+        return copy
     }
     
-    private var shouldGlow: Bool {
-        adaptiveMode == .glow || adaptiveMode == .all
+    public func threshold(_ value: Double) -> LuxeAdaptiveContainer {
+        var copy = self
+        copy.configuration.probabilityThreshold = value
+        return copy
+    }
+}
+
+// MARK: - Smart Form Button Configuration
+
+public struct SmartFormButtonConfiguration: Sendable {
+    public var minWidth: CGFloat
+    public var maxWidth: CGFloat
+    public var minHeight: CGFloat
+    public var maxHeight: CGFloat
+    public var cornerRadius: CGFloat
+    public var fontSize: CGFloat
+    public var fontWeight: Font.Weight
+    public var inactiveColors: [Color]
+    public var activeColors: [Color]
+    public var shadowRadius: CGFloat
+    public var animationResponse: Double
+    public var animationDamping: Double
+    public var enableHaptics: Bool
+    public var hapticThreshold: Double
+    
+    public init(
+        minWidth: CGFloat = 120,
+        maxWidth: CGFloat = 280,
+        minHeight: CGFloat = 44,
+        maxHeight: CGFloat = 56,
+        cornerRadius: CGFloat = 14,
+        fontSize: CGFloat = 16,
+        fontWeight: Font.Weight = .semibold,
+        inactiveColors: [Color] = [.gray.opacity(0.3), .gray.opacity(0.2)],
+        activeColors: [Color] = [.green, .cyan],
+        shadowRadius: CGFloat = 20,
+        animationResponse: Double = 0.4,
+        animationDamping: Double = 0.7,
+        enableHaptics: Bool = true,
+        hapticThreshold: Double = 0.5
+    ) {
+        self.minWidth = minWidth
+        self.maxWidth = maxWidth
+        self.minHeight = minHeight
+        self.maxHeight = maxHeight
+        self.cornerRadius = cornerRadius
+        self.fontSize = fontSize
+        self.fontWeight = fontWeight
+        self.inactiveColors = inactiveColors
+        self.activeColors = activeColors
+        self.shadowRadius = shadowRadius
+        self.animationResponse = animationResponse
+        self.animationDamping = animationDamping
+        self.enableHaptics = enableHaptics
+        self.hapticThreshold = hapticThreshold
     }
     
-    private var shouldElevate: Bool {
-        adaptiveMode == .elevate || adaptiveMode == .all
-    }
+    public static let `default` = SmartFormButtonConfiguration()
     
-    private var shouldPrioritize: Bool {
-        adaptiveMode == .prioritize || adaptiveMode == .all
-    }
+    public static let compact = SmartFormButtonConfiguration(
+        minWidth: 100,
+        maxWidth: 200,
+        minHeight: 36,
+        maxHeight: 48
+    )
     
-    private func updateAdaptiveState(probability: Double) {
-        let intensity = CGFloat(probability)
-        
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-            if shouldScale {
-                currentScale = 1.0 + (intensity * 0.1) // Grow up to 10%
-            }
-            
-            if shouldGlow {
-                currentGlow = intensity
-            }
-            
-            if shouldElevate {
-                currentElevation = intensity
-            }
-            
-            if shouldPrioritize {
-                priority = intensity * 100 // Higher z-index
-            }
-        }
-    }
+    public static let large = SmartFormButtonConfiguration(
+        minWidth: 150,
+        maxWidth: 350,
+        minHeight: 50,
+        maxHeight: 64,
+        fontSize: 18
+    )
 }
 
 // MARK: - Smart Form Button
 
-/// A button that adapts based on form completion probability
 public struct SmartFormButton: View {
-    @Environment(\.luxeTheme) private var theme
+    private let title: String
+    private let completionProbability: Double
+    private let action: () -> Void
+    private var configuration: SmartFormButtonConfiguration
     
-    let title: String
-    let completionProbability: Double
-    let action: () -> Void
-    
-    @State private var pulsePhase: CGFloat = 0
+    @State private var isPressed = false
+    @State private var lastHapticProbability: Double = 0
     
     public init(
         _ title: String,
         completionProbability: Double,
+        configuration: SmartFormButtonConfiguration = .default,
         action: @escaping () -> Void
     ) {
         self.title = title
-        self.completionProbability = max(0.0, min(1.0, completionProbability))
+        self.completionProbability = completionProbability
+        self.configuration = configuration
         self.action = action
     }
     
-    public var body: some View {
-        LuxeAdaptiveContainer(
-            probabilityOfAction: completionProbability,
-            mode: .all
-        ) {
-            Button(action: {
-                TactileFeedback.trigger(.success)
-                action()
-            }) {
-                HStack(spacing: 12) {
-                    Text(title)
-                        .font(.headline)
-                    
-                    if completionProbability > 0.8 {
-                        Image(systemName: "arrow.right.circle.fill")
-                            .font(.title3)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, theme.spacingL)
-                .padding(.vertical, theme.spacingM)
-                .background(
-                    ZStack {
-                        // Base gradient
-                        LinearGradient(
-                            colors: [
-                                theme.primaryColor,
-                                theme.secondaryColor
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        
-                        // Readiness pulse
-                        if completionProbability > 0.7 {
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            .white.opacity(0.4 * completionProbability),
-                                            .clear
-                                        ],
-                                        center: .center,
-                                        startRadius: 0,
-                                        endRadius: 100
-                                    )
-                                )
-                                .scaleEffect(pulsePhase)
-                                .opacity(1.0 - pulsePhase)
-                                .blendMode(.overlay)
-                        }
-                    }
-                )
-                .clipShape(RoundedRectangle(cornerRadius: theme.cornerRadiusMedium))
-                .overlay(
-                    RoundedRectangle(cornerRadius: theme.cornerRadiusMedium)
-                        .strokeBorder(
-                            .white.opacity(0.3 * completionProbability),
-                            lineWidth: 2
-                        )
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            .disabled(completionProbability < 0.3)
-            .opacity(completionProbability < 0.3 ? 0.5 : 1.0)
+    private var interpolatedWidth: CGFloat {
+        configuration.minWidth + (configuration.maxWidth - configuration.minWidth) * CGFloat(completionProbability)
+    }
+    
+    private var interpolatedHeight: CGFloat {
+        configuration.minHeight + (configuration.maxHeight - configuration.minHeight) * CGFloat(completionProbability)
+    }
+    
+    private var currentGradient: [Color] {
+        if completionProbability < 0.3 {
+            return configuration.inactiveColors
+        } else if completionProbability < 0.7 {
+            return [
+                configuration.inactiveColors[0].opacity(1 - completionProbability),
+                configuration.activeColors[0].opacity(completionProbability)
+            ]
+        } else {
+            return configuration.activeColors
         }
-        .onAppear {
-            if completionProbability > 0.7 {
-                withAnimation(
-                    .linear(duration: 1.5)
-                    .repeatForever(autoreverses: false)
-                ) {
-                    pulsePhase = 1.0
+    }
+    
+    public var body: some View {
+        Button(action: {
+            if configuration.enableHaptics {
+                TactileFeedback.heavy()
+            }
+            action()
+        }) {
+            Text(title)
+                .font(.system(size: configuration.fontSize, weight: configuration.fontWeight))
+                .foregroundColor(.white)
+                .frame(width: interpolatedWidth, height: interpolatedHeight)
+                .background(
+                    LinearGradient(
+                        colors: currentGradient,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: configuration.cornerRadius))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: configuration.cornerRadius)
+                        .stroke(.white.opacity(0.2), lineWidth: 1)
+                )
+                .shadow(
+                    color: completionProbability > 0.5 
+                        ? configuration.activeColors[0].opacity(0.4 * completionProbability) 
+                        : .clear,
+                    radius: configuration.shadowRadius * CGFloat(completionProbability),
+                    y: 8
+                )
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? 0.95 : 1.0)
+        .animation(
+            .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+            value: completionProbability
+        )
+        .animation(
+            .spring(response: 0.2, dampingFraction: 0.7),
+            value: isPressed
+        )
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
+        .onChange(of: completionProbability) { newValue in
+            if configuration.enableHaptics {
+                // Haptic when crossing threshold
+                if newValue >= configuration.hapticThreshold && lastHapticProbability < configuration.hapticThreshold {
+                    TactileFeedback.medium()
                 }
+                // Haptic when form becomes complete
+                if newValue >= 0.95 && lastHapticProbability < 0.95 {
+                    TactileFeedback.success()
+                }
+                lastHapticProbability = newValue
             }
         }
     }
+    
+    // Modifier methods
+    public func colors(inactive: [Color], active: [Color]) -> SmartFormButton {
+        var copy = self
+        copy.configuration.inactiveColors = inactive
+        copy.configuration.activeColors = active
+        return copy
+    }
+    
+    public func size(minWidth: CGFloat = 120, maxWidth: CGFloat = 280, minHeight: CGFloat = 44, maxHeight: CGFloat = 56) -> SmartFormButton {
+        var copy = self
+        copy.configuration.minWidth = minWidth
+        copy.configuration.maxWidth = maxWidth
+        copy.configuration.minHeight = minHeight
+        copy.configuration.maxHeight = maxHeight
+        return copy
+    }
+}
+
+// MARK: - Predictive List Item Configuration
+
+public struct PredictiveListItemConfiguration: Sendable {
+    public var baseOpacity: Double
+    public var activeOpacity: Double
+    public var baseScale: CGFloat
+    public var activeScale: CGFloat
+    public var leadingPadding: CGFloat
+    public var activeLeadingPadding: CGFloat
+    public var glowColor: Color
+    public var glowOpacity: Double
+    public var shadowRadius: CGFloat
+    public var animationResponse: Double
+    public var enableHaptics: Bool
+    
+    public init(
+        baseOpacity: Double = 0.6,
+        activeOpacity: Double = 1.0,
+        baseScale: CGFloat = 0.98,
+        activeScale: CGFloat = 1.0,
+        leadingPadding: CGFloat = 0,
+        activeLeadingPadding: CGFloat = 8,
+        glowColor: Color = .blue,
+        glowOpacity: Double = 0.2,
+        shadowRadius: CGFloat = 10,
+        animationResponse: Double = 0.3,
+        enableHaptics: Bool = true
+    ) {
+        self.baseOpacity = baseOpacity
+        self.activeOpacity = activeOpacity
+        self.baseScale = baseScale
+        self.activeScale = activeScale
+        self.leadingPadding = leadingPadding
+        self.activeLeadingPadding = activeLeadingPadding
+        self.glowColor = glowColor
+        self.glowOpacity = glowOpacity
+        self.shadowRadius = shadowRadius
+        self.animationResponse = animationResponse
+        self.enableHaptics = enableHaptics
+    }
+    
+    public static let `default` = PredictiveListItemConfiguration()
+    
+    public static let subtle = PredictiveListItemConfiguration(
+        baseOpacity: 0.8,
+        activeScale: 1.0,
+        activeLeadingPadding: 4
+    )
+    
+    public static let prominent = PredictiveListItemConfiguration(
+        baseOpacity: 0.5,
+        activeScale: 1.02,
+        activeLeadingPadding: 12,
+        glowOpacity: 0.3
+    )
 }
 
 // MARK: - Predictive List Item
 
-/// List item that adapts based on likelihood of selection
 public struct PredictiveListItem<Content: View>: View {
-    @Environment(\.luxeTheme) private var theme
-    
-    let selectionProbability: Double
-    let content: Content
-    let onTap: () -> Void
+    private let content: Content
+    private let probability: Double
+    private var configuration: PredictiveListItemConfiguration
     
     public init(
-        selectionProbability: Double,
-        onTap: @escaping () -> Void,
+        probability: Double,
+        configuration: PredictiveListItemConfiguration = .default,
         @ViewBuilder content: () -> Content
     ) {
-        self.selectionProbability = max(0.0, min(1.0, selectionProbability))
-        self.onTap = onTap
+        self.probability = probability
+        self.configuration = configuration
         self.content = content()
     }
     
+    private var interpolatedOpacity: Double {
+        configuration.baseOpacity + (configuration.activeOpacity - configuration.baseOpacity) * probability
+    }
+    
+    private var interpolatedScale: CGFloat {
+        configuration.baseScale + (configuration.activeScale - configuration.baseScale) * CGFloat(probability)
+    }
+    
+    private var interpolatedPadding: CGFloat {
+        configuration.leadingPadding + (configuration.activeLeadingPadding - configuration.leadingPadding) * CGFloat(probability)
+    }
+    
     public var body: some View {
-        LuxeAdaptiveContainer(
-            probabilityOfAction: selectionProbability,
-            mode: .all
-        ) {
-            Button(action: {
-                TactileFeedback.trigger(.light)
-                onTap()
-            }) {
-                HStack {
-                    content
-                    Spacer()
-                    
-                    if selectionProbability > 0.6 {
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(theme.primaryColor)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                }
-                .padding(theme.spacingM)
-                .background(
-                    RoundedRectangle(cornerRadius: theme.cornerRadiusSmall)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: theme.cornerRadiusSmall)
-                                .strokeBorder(
-                                    theme.primaryColor.opacity(0.3 * selectionProbability),
-                                    lineWidth: 1 + selectionProbability
-                                )
-                        )
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-        }
+        content
+            .opacity(interpolatedOpacity)
+            .scaleEffect(interpolatedScale, anchor: .leading)
+            .padding(.leading, interpolatedPadding)
+            .shadow(
+                color: probability > 0.5 
+                    ? configuration.glowColor.opacity(configuration.glowOpacity * probability) 
+                    : .clear,
+                radius: configuration.shadowRadius * CGFloat(probability)
+            )
+            .animation(
+                .spring(response: configuration.animationResponse, dampingFraction: 0.7),
+                value: probability
+            )
+    }
+    
+    // Modifier methods
+    public func glowColor(_ color: Color) -> PredictiveListItem {
+        var copy = self
+        copy.configuration.glowColor = color
+        return copy
     }
 }
 
-// MARK: - Intent Probability Calculator
+// MARK: - Intent Calculator
 
-/// Helper to calculate user intent probability from form/context state
 public struct IntentCalculator {
-    /// Calculate form completion probability
+    /// Calculate form completion probability based on filled fields
     public static func formCompletionProbability(
         filledFields: Int,
         totalFields: Int,
         isValid: Bool = true
     ) -> Double {
-        guard totalFields > 0 else { return 0.0 }
-        
-        let completionRatio = Double(filledFields) / Double(totalFields)
-        let validityMultiplier = isValid ? 1.0 : 0.5
-        
-        return completionRatio * validityMultiplier
+        guard totalFields > 0 else { return 0 }
+        let fillRatio = Double(filledFields) / Double(totalFields)
+        let validityBonus = isValid ? 0.1 : 0
+        return min(fillRatio + validityBonus, 1.0)
     }
     
-    /// Calculate selection probability based on hover time and frequency
+    /// Calculate hover intent based on duration
+    public static func hoverIntentProbability(
+        duration: TimeInterval,
+        maxDuration: TimeInterval = 2.0
+    ) -> Double {
+        min(duration / maxDuration, 1.0)
+    }
+    
+    /// Calculate scroll intent based on position
+    public static func scrollIntentProbability(
+        currentPosition: CGFloat,
+        targetPosition: CGFloat,
+        viewportHeight: CGFloat
+    ) -> Double {
+        let distance = abs(currentPosition - targetPosition)
+        let normalizedDistance = distance / viewportHeight
+        return max(0, 1 - normalizedDistance)
+    }
+    
+    /// Calculate click probability based on mouse movement patterns
+    public static func clickIntentProbability(
+        approachVelocity: CGFloat,
+        distanceToTarget: CGFloat,
+        maxDistance: CGFloat = 100
+    ) -> Double {
+        let distanceFactor = max(0, 1 - distanceToTarget / maxDistance)
+        let velocityFactor = min(approachVelocity / 500, 1.0)
+        return distanceFactor * (0.7 + velocityFactor * 0.3)
+    }
+    
+    /// Calculate selection probability based on context
     public static func selectionProbability(
-        hoverDuration: TimeInterval,
-        hoverCount: Int,
-        maxHoverTime: TimeInterval = 2.0
+        itemIndex: Int,
+        totalItems: Int,
+        recentSelections: [Int] = [],
+        weights: [Int: Double] = [:]
     ) -> Double {
-        let durationScore = min(hoverDuration / maxHoverTime, 1.0)
-        let frequencyScore = min(Double(hoverCount) / 3.0, 1.0)
+        var probability = 1.0 / Double(totalItems)
         
-        return (durationScore * 0.7 + frequencyScore * 0.3)
-    }
-    
-    /// Calculate scroll-to-view probability
-    public static func viewProbability(
-        scrollVelocity: CGFloat,
-        distanceToElement: CGFloat,
-        screenHeight: CGFloat
-    ) -> Double {
-        guard scrollVelocity > 0 else { return 0.0 }
+        // Boost recently selected items
+        if recentSelections.contains(itemIndex) {
+            probability *= 1.5
+        }
         
-        let velocityFactor = min(scrollVelocity / 1000.0, 1.0)
-        let distanceFactor = max(0.0, 1.0 - (distanceToElement / screenHeight))
+        // Apply custom weights
+        if let weight = weights[itemIndex] {
+            probability *= weight
+        }
         
-        return velocityFactor * distanceFactor
+        return min(probability, 1.0)
     }
 }
 
-// MARK: - View Extensions
+// MARK: - Predictive Modifier
 
-extension View {
-    /// Make container adapt to user intent probability
-    ///
-    /// Layout reshapes based on likelihood of user action
-    ///
-    /// Example:
-    /// ```swift
-    /// LuxeCard { }
-    ///     .adaptive(probability: formCompletion, mode: .all)
-    /// ```
-    public func adaptive(
+public struct PredictiveModifier: ViewModifier {
+    let probability: Double
+    let configuration: PredictiveLayoutConfiguration
+    
+    public init(probability: Double, configuration: PredictiveLayoutConfiguration = .default) {
+        self.probability = probability
+        self.configuration = configuration
+    }
+    
+    public func body(content: Content) -> some View {
+        content
+            .opacity(configuration.baseOpacity + (configuration.activeOpacity - configuration.baseOpacity) * probability)
+            .scaleEffect(
+                configuration.enableScale 
+                    ? configuration.baseScale + (configuration.activeScale - configuration.baseScale) * CGFloat(probability)
+                    : 1.0
+            )
+            .shadow(
+                color: configuration.enableGlow && probability > configuration.probabilityThreshold
+                    ? configuration.glowColor.opacity(configuration.glowOpacity * probability)
+                    : .clear,
+                radius: configuration.enableElevation
+                    ? configuration.baseShadowRadius + (configuration.activeShadowRadius - configuration.baseShadowRadius) * CGFloat(probability)
+                    : 0
+            )
+            .animation(
+                .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+                value: probability
+            )
+    }
+}
+
+// MARK: - View Extension
+
+public extension View {
+    func predictive(
         probability: Double,
-        mode: LuxeAdaptiveContainer<Self>.AdaptiveMode = .all
+        configuration: PredictiveLayoutConfiguration = .default
     ) -> some View {
-        LuxeAdaptiveContainer(
-            probabilityOfAction: probability,
-            mode: mode
-        ) {
-            self
-        }
+        self.modifier(PredictiveModifier(probability: probability, configuration: configuration))
     }
 }

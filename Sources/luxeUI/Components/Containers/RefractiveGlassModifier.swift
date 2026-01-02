@@ -1,325 +1,572 @@
 import SwiftUI
 
-// MARK: - Refractive Glass Effect
+// MARK: - Refractive Glass Configuration
 
-/// A premium refractive glass effect that physically warps the background
-/// like looking through a liquid glass lens - the signature effect of 2026 UI design
-public struct RefractiveGlassModifier: ViewModifier {
-    @Environment(\.luxeTheme) private var theme
-    
-    let intensity: CGFloat
-    let blurRadius: CGFloat
-    let borderWidth: CGFloat
-    
-    @State private var animationPhase: CGFloat = 0
+public struct RefractiveGlassConfiguration: Sendable {
+    public var distortionIntensity: Double
+    public var distortionRadius: CGFloat
+    public var chromaticAberration: Bool
+    public var aberrationStrength: CGFloat
+    public var causticAnimation: Bool
+    public var causticSpeed: Double
+    public var causticCount: Int
+    public var layerCount: Int
+    public var blurRadius: CGFloat
+    public var cornerRadius: CGFloat
+    public var backgroundOpacity: Double
+    public var borderWidth: CGFloat
+    public var borderOpacity: Double
+    public var shadowRadius: CGFloat
+    public var shadowOpacity: Double
+    public var enableHaptics: Bool
+    public var animationResponse: Double
+    public var animationDamping: Double
     
     public init(
-        intensity: CGFloat = 0.15,
+        distortionIntensity: Double = 0.2,
+        distortionRadius: CGFloat = 50,
+        chromaticAberration: Bool = true,
+        aberrationStrength: CGFloat = 2.0,
+        causticAnimation: Bool = true,
+        causticSpeed: Double = 0.5,
+        causticCount: Int = 8,
+        layerCount: Int = 3,
         blurRadius: CGFloat = 20,
-        borderWidth: CGFloat = 1
+        cornerRadius: CGFloat = 24,
+        backgroundOpacity: Double = 0.15,
+        borderWidth: CGFloat = 1.5,
+        borderOpacity: Double = 0.4,
+        shadowRadius: CGFloat = 30,
+        shadowOpacity: Double = 0.5,
+        enableHaptics: Bool = true,
+        animationResponse: Double = 0.3,
+        animationDamping: Double = 0.7
     ) {
-        self.intensity = intensity
+        self.distortionIntensity = distortionIntensity
+        self.distortionRadius = distortionRadius
+        self.chromaticAberration = chromaticAberration
+        self.aberrationStrength = aberrationStrength
+        self.causticAnimation = causticAnimation
+        self.causticSpeed = causticSpeed
+        self.causticCount = causticCount
+        self.layerCount = layerCount
         self.blurRadius = blurRadius
+        self.cornerRadius = cornerRadius
+        self.backgroundOpacity = backgroundOpacity
         self.borderWidth = borderWidth
+        self.borderOpacity = borderOpacity
+        self.shadowRadius = shadowRadius
+        self.shadowOpacity = shadowOpacity
+        self.enableHaptics = enableHaptics
+        self.animationResponse = animationResponse
+        self.animationDamping = animationDamping
+    }
+    
+    // Presets
+    public static let `default` = RefractiveGlassConfiguration()
+    
+    public static let subtle = RefractiveGlassConfiguration(
+        distortionIntensity: 0.1,
+        aberrationStrength: 1.0,
+        causticCount: 4,
+        layerCount: 2,
+        blurRadius: 15
+    )
+    
+    public static let intense = RefractiveGlassConfiguration(
+        distortionIntensity: 0.35,
+        aberrationStrength: 3.0,
+        causticCount: 12,
+        layerCount: 5,
+        blurRadius: 25
+    )
+    
+    public static let minimal = RefractiveGlassConfiguration(
+        distortionIntensity: 0.05,
+        chromaticAberration: false,
+        causticAnimation: false,
+        layerCount: 1,
+        blurRadius: 10
+    )
+    
+    public static let liquid = RefractiveGlassConfiguration(
+        distortionIntensity: 0.25,
+        distortionRadius: 70,
+        aberrationStrength: 2.5,
+        causticSpeed: 0.3,
+        causticCount: 10,
+        layerCount: 4
+    )
+    
+    public static let frosted = RefractiveGlassConfiguration(
+        distortionIntensity: 0.08,
+        chromaticAberration: false,
+        causticAnimation: false,
+        blurRadius: 30,
+        backgroundOpacity: 0.25
+    )
+}
+
+// MARK: - Refractive Glass Modifier
+
+public struct RefractiveGlassModifier: ViewModifier {
+    private let configuration: RefractiveGlassConfiguration
+    
+    @State private var phase: Double = 0
+    @Environment(\.luxeTheme) private var theme
+    
+    public init(configuration: RefractiveGlassConfiguration = .default) {
+        self.configuration = configuration
     }
     
     public func body(content: Content) -> some View {
         content
             .background(
                 ZStack {
-                    // Multi-layer refractive effect
-                    RefractiveLayer(phase: animationPhase, intensity: intensity * 1.0)
-                        .blur(radius: blurRadius * 0.8)
+                    // Multi-layer refractive depth
+                    ForEach(0..<configuration.layerCount, id: \.self) { layer in
+                        RefractiveLayer(
+                            layer: layer,
+                            totalLayers: configuration.layerCount,
+                            configuration: configuration,
+                            phase: phase
+                        )
+                    }
                     
-                    RefractiveLayer(phase: animationPhase + 0.3, intensity: intensity * 0.7)
-                        .blur(radius: blurRadius * 0.5)
-                    
-                    RefractiveLayer(phase: animationPhase + 0.6, intensity: intensity * 0.4)
-                        .blur(radius: blurRadius * 0.3)
+                    // Optional caustic light patterns
+                    if configuration.causticAnimation {
+                        CausticLightCanvas(
+                            phase: phase,
+                            causticCount: configuration.causticCount
+                        )
+                    }
                 }
-                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: configuration.cornerRadius))
             )
             .overlay(
-                // Refractive border with iridescent effect
-                RoundedRectangle(cornerRadius: theme.cornerRadiusLarge)
-                    .strokeBorder(
+                RoundedRectangle(cornerRadius: configuration.cornerRadius)
+                    .stroke(
                         LinearGradient(
                             colors: [
-                                theme.primaryColor.opacity(0.3),
-                                theme.secondaryColor.opacity(0.2),
-                                theme.accentColor.opacity(0.3)
+                                .white.opacity(configuration.borderOpacity),
+                                .white.opacity(configuration.borderOpacity * 0.25)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: borderWidth
+                        lineWidth: configuration.borderWidth
                     )
             )
-            .clipShape(RoundedRectangle(cornerRadius: theme.cornerRadiusLarge))
-            .shadow(color: theme.primaryColor.opacity(0.2), radius: 20, x: 0, y: 10)
-            .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+            .shadow(
+                color: theme.primaryColor.opacity(configuration.shadowOpacity),
+                radius: configuration.shadowRadius,
+                y: 15
+            )
             .onAppear {
-                withAnimation(
-                    .linear(duration: 8)
-                    .repeatForever(autoreverses: false)
-                ) {
-                    animationPhase = 1.0
+                if configuration.causticAnimation {
+                    withAnimation(
+                        .linear(duration: 10 / configuration.causticSpeed)
+                        .repeatForever(autoreverses: false)
+                    ) {
+                        phase = 2 * .pi
+                    }
                 }
             }
     }
 }
 
-// MARK: - Refractive Layer with Lens Distortion
+// MARK: - Refractive Layer
 
 private struct RefractiveLayer: View {
-    let phase: CGFloat
-    let intensity: CGFloat
+    let layer: Int
+    let totalLayers: Int
+    let configuration: RefractiveGlassConfiguration
+    let phase: Double
+    
+    private var layerOffset: Double {
+        Double(layer) / Double(totalLayers)
+    }
     
     var body: some View {
-        Rectangle()
-            .fill(
-                RadialGradient(
-                    colors: [
-                        .white.opacity(0.15),
-                        .white.opacity(0.08),
-                        .white.opacity(0.03),
-                        .clear
-                    ],
-                    center: .center,
-                    startRadius: 20,
-                    endRadius: 200
-                )
+        ZStack {
+            // Base glass material
+            RoundedRectangle(cornerRadius: configuration.cornerRadius)
+                .fill(.ultraThinMaterial)
+                .opacity(0.3 + layerOffset * 0.2)
+            
+            // Chromatic aberration layers
+            if configuration.chromaticAberration {
+                // Red channel
+                RoundedRectangle(cornerRadius: configuration.cornerRadius)
+                    .fill(
+                        RadialGradient(
+                            colors: [.red.opacity(0.1), .clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: configuration.distortionRadius + CGFloat(layer * 20)
+                        )
+                    )
+                    .offset(
+                        x: -configuration.aberrationStrength * (1 + layerOffset),
+                        y: -configuration.aberrationStrength * (1 + layerOffset)
+                    )
+                    .blendMode(.screen)
+                
+                // Blue channel
+                RoundedRectangle(cornerRadius: configuration.cornerRadius)
+                    .fill(
+                        RadialGradient(
+                            colors: [.blue.opacity(0.1), .clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: configuration.distortionRadius + CGFloat(layer * 20)
+                        )
+                    )
+                    .offset(
+                        x: configuration.aberrationStrength * (1 + layerOffset),
+                        y: configuration.aberrationStrength * (1 + layerOffset)
+                    )
+                    .blendMode(.screen)
+            }
+            
+            // Glass highlight
+            LinearGradient(
+                colors: [
+                    .white.opacity(0.2 - layerOffset * 0.1),
+                    .clear,
+                    .white.opacity(0.05)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            .modifier(LensDistortionEffect(phase: phase, intensity: intensity))
+        }
+        .blur(radius: configuration.blurRadius / CGFloat(totalLayers - layer + 1))
     }
 }
 
-// MARK: - Lens Distortion Geometry Effect
+// MARK: - Caustic Light Canvas
 
-/// Creates a lens-like warping effect that simulates light refraction
-private struct LensDistortionEffect: GeometryEffect {
-    var phase: CGFloat
-    var intensity: CGFloat
+private struct CausticLightCanvas: View {
+    let phase: Double
+    let causticCount: Int
     
-    var animatableData: AnimatablePair<CGFloat, CGFloat> {
-        get { AnimatablePair(phase, intensity) }
-        set {
-            phase = newValue.first
-            intensity = newValue.second
+    var body: some View {
+        Canvas { context, size in
+            for i in 0..<causticCount {
+                let progress = Double(i) / Double(causticCount)
+                let x = size.width * (0.2 + 0.6 * sin(phase + progress * .pi * 2))
+                let y = size.height * (0.2 + 0.6 * cos(phase * 1.3 + progress * .pi * 2))
+                
+                let causticSize = 30 + 20 * sin(phase * 2 + progress * .pi)
+                
+                let gradient = Gradient(colors: [
+                    .white.opacity(0.3),
+                    .white.opacity(0.1),
+                    .clear
+                ])
+                
+                context.fill(
+                    Path(ellipseIn: CGRect(
+                        x: x - causticSize / 2,
+                        y: y - causticSize / 2,
+                        width: causticSize,
+                        height: causticSize * 0.6
+                    )),
+                    with: .radialGradient(
+                        gradient,
+                        center: CGPoint(x: x, y: y),
+                        startRadius: 0,
+                        endRadius: causticSize / 2
+                    )
+                )
+            }
         }
+        .blendMode(.overlay)
+    }
+}
+
+// MARK: - Lens Distortion Effect
+
+public struct LensDistortionEffect: GeometryEffect {
+    public var intensity: Double
+    public var radius: CGFloat
+    
+    public var animatableData: Double {
+        get { intensity }
+        set { intensity = newValue }
     }
     
-    func effectValue(size: CGSize) -> ProjectionTransform {
-        // Create subtle warping at edges - lens effect
-        let centerX = size.width / 2
-        let centerY = size.height / 2
-        
-        // Lens distortion matrix
-        let scale = 1.0 + (intensity * 0.05 * sin(phase * .pi * 2))
+    public init(intensity: Double = 0.2, radius: CGFloat = 50) {
+        self.intensity = intensity
+        self.radius = radius
+    }
+    
+    public func effectValue(size: CGSize) -> ProjectionTransform {
+        let perspective: CGFloat = 1 / (1 + CGFloat(intensity) * 0.5)
         
         var transform = CATransform3DIdentity
-        transform.m34 = -1.0 / 1000.0 // Perspective
+        transform.m34 = -1 / (size.width * 2)
+        transform = CATransform3DRotate(transform, CGFloat(intensity) * 0.1, 1, 0, 0)
+        transform = CATransform3DRotate(transform, CGFloat(intensity) * 0.1, 0, 1, 0)
+        transform = CATransform3DScale(transform, perspective, perspective, 1)
         
-        // Apply subtle rotation for liquid effect
-        transform = CATransform3DRotate(transform, intensity * 0.02 * sin(phase * .pi), 1, 0, 0)
-        transform = CATransform3DRotate(transform, intensity * 0.02 * cos(phase * .pi), 0, 1, 0)
+        let affine = CGAffineTransform(
+            a: transform.m11,
+            b: transform.m12,
+            c: transform.m21,
+            d: transform.m22,
+            tx: transform.m41,
+            ty: transform.m42
+        )
         
-        // Scale from center
-        transform = CATransform3DTranslate(transform, -centerX, -centerY, 0)
-        transform = CATransform3DScale(transform, scale, scale, 1.0)
-        transform = CATransform3DTranslate(transform, centerX, centerY, 0)
-        
-        return ProjectionTransform(transform)
+        return ProjectionTransform(affine)
     }
 }
 
-// MARK: - Advanced Refractive Glass with Edge Distortion
+// MARK: - Advanced Refractive Glass
 
-/// Premium refractive glass with physically-based edge warping
 public struct AdvancedRefractiveGlass<Content: View>: View {
+    private let content: Content
+    private let configuration: RefractiveGlassConfiguration
+    
+    @State private var phase: Double = 0
     @Environment(\.luxeTheme) private var theme
     
-    let content: Content
-    let distortionIntensity: CGFloat
-    let chromaticAberration: Bool
-    
-    @State private var phase: CGFloat = 0
-    
     public init(
-        distortionIntensity: CGFloat = 0.2,
-        chromaticAberration: Bool = true,
+        configuration: RefractiveGlassConfiguration = .default,
         @ViewBuilder content: () -> Content
     ) {
+        self.configuration = configuration
         self.content = content()
-        self.distortionIntensity = distortionIntensity
-        self.chromaticAberration = chromaticAberration
+    }
+    
+    public var body: some View {
+        content
+            .modifier(LensDistortionEffect(
+                intensity: configuration.distortionIntensity,
+                radius: configuration.distortionRadius
+            ))
+            .modifier(RefractiveGlassModifier(configuration: configuration))
+    }
+}
+
+// MARK: - Refractive Glass Card
+
+public struct RefractiveGlassCard<Content: View>: View {
+    private let content: Content
+    private var configuration: RefractiveGlassConfiguration
+    
+    // Callbacks
+    private var onHoverStart: (() -> Void)?
+    private var onHoverEnd: (() -> Void)?
+    private var onTapAction: (() -> Void)?
+    
+    @State private var isHovered = false
+    @State private var isPressed = false
+    @State private var phase: Double = 0
+    @Environment(\.luxeTheme) private var theme
+    
+    public init(
+        configuration: RefractiveGlassConfiguration = .default,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.configuration = configuration
+        self.content = content()
+    }
+    
+    // Convenience initializer with common parameters
+    public init(
+        distortionIntensity: Double = 0.2,
+        chromaticAberration: Bool = true,
+        cornerRadius: CGFloat = 24,
+        causticAnimation: Bool = true,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.configuration = RefractiveGlassConfiguration(
+            distortionIntensity: distortionIntensity,
+            chromaticAberration: chromaticAberration,
+            causticAnimation: causticAnimation,
+            cornerRadius: cornerRadius
+        )
+        self.content = content()
     }
     
     public var body: some View {
         ZStack {
-            // Background with animated mesh distortion
-            if chromaticAberration {
-                // RGB channel separation for prismatic effect
-                Group {
-                    content
-                        .colorMultiply(.red.opacity(0.3))
-                        .offset(x: sin(phase * .pi) * distortionIntensity * 2, y: 0)
-                    
-                    content
-                        .colorMultiply(.green.opacity(0.3))
-                    
-                    content
-                        .colorMultiply(.blue.opacity(0.3))
-                        .offset(x: -sin(phase * .pi) * distortionIntensity * 2, y: 0)
+            // Multi-layer refractive background
+            ZStack {
+                ForEach(0..<configuration.layerCount, id: \.self) { layer in
+                    RefractiveLayer(
+                        layer: layer,
+                        totalLayers: configuration.layerCount,
+                        configuration: configuration,
+                        phase: phase
+                    )
                 }
-                .blendMode(.screen)
-                .blur(radius: 15)
+                
+                if configuration.causticAnimation {
+                    CausticLightCanvas(
+                        phase: phase,
+                        causticCount: configuration.causticCount
+                    )
+                }
             }
+            .clipShape(RoundedRectangle(cornerRadius: configuration.cornerRadius))
             
-            // Main content with refractive layers
+            // Content
             content
-                .background(.ultraThinMaterial)
-                .overlay(
-                    // Animated refractive caustics
-                    Canvas { context, size in
-                        let columns = 8
-                        let rows = 8
-                        let cellWidth = size.width / CGFloat(columns)
-                        let cellHeight = size.height / CGFloat(rows)
-                        
-                        for row in 0..<rows {
-                            for col in 0..<columns {
-                                let x = CGFloat(col) * cellWidth + cellWidth / 2
-                                let y = CGFloat(row) * cellHeight + cellHeight / 2
-                                
-                                // Distance from center
-                                let dx = x - size.width / 2
-                                let dy = y - size.height / 2
-                                let distance = sqrt(dx * dx + dy * dy)
-                                let maxDistance = sqrt(size.width * size.width + size.height * size.height) / 2
-                                
-                                // Caustic effect - stronger at edges
-                                let edgeFactor = distance / maxDistance
-                                let wave = sin(phase * .pi * 2 + distance * 0.05) * distortionIntensity
-                                let opacity = edgeFactor * 0.1 * (1 + wave)
-                                
-                                let center = CGPoint(x: x, y: y)
-                                let radius = cellWidth * (0.3 + wave * 0.2)
-                                
-                                context.fill(
-                                    Path(ellipseIn: CGRect(
-                                        x: center.x - radius,
-                                        y: center.y - radius,
-                                        width: radius * 2,
-                                        height: radius * 2
-                                    )),
-                                    with: .color(.white.opacity(opacity))
-                                )
-                            }
+                .padding()
+        }
+        .background(
+            RoundedRectangle(cornerRadius: configuration.cornerRadius)
+                .fill(.white.opacity(configuration.backgroundOpacity))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: configuration.cornerRadius)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(configuration.borderOpacity),
+                            .white.opacity(configuration.borderOpacity * 0.25)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: configuration.borderWidth
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: configuration.cornerRadius))
+        .shadow(
+            color: theme.primaryColor.opacity(configuration.shadowOpacity),
+            radius: configuration.shadowRadius,
+            y: 15
+        )
+        .modifier(LensDistortionEffect(
+            intensity: isHovered ? configuration.distortionIntensity * 1.5 : configuration.distortionIntensity,
+            radius: configuration.distortionRadius
+        ))
+        .scaleEffect(isPressed ? 0.98 : (isHovered ? 1.02 : 1.0))
+        .animation(
+            .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+            value: isHovered
+        )
+        .animation(
+            .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+            value: isPressed
+        )
+        .onHover { hovering in
+            isHovered = hovering
+            if hovering {
+                onHoverStart?()
+            } else {
+                onHoverEnd?()
+            }
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    if !isPressed {
+                        isPressed = true
+                        if configuration.enableHaptics {
+                            TactileFeedback.light()
                         }
                     }
-                    .blur(radius: 8)
-                    .blendMode(.overlay)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: theme.cornerRadiusLarge))
-                .overlay(
-                    // Prismatic edge highlight
-                    RoundedRectangle(cornerRadius: theme.cornerRadiusLarge)
-                        .strokeBorder(
-                            AngularGradient(
-                                colors: [
-                                    theme.primaryColor,
-                                    theme.secondaryColor,
-                                    theme.accentColor,
-                                    theme.primaryColor
-                                ],
-                                center: .center,
-                                angle: .degrees(phase * 360)
-                            ),
-                            lineWidth: 1.5
-                        )
-                        .opacity(0.4)
-                )
-                .shadow(color: theme.primaryColor.opacity(0.3), radius: 20, x: 0, y: 10)
-                .shadow(color: theme.secondaryColor.opacity(0.2), radius: 30, x: 0, y: 15)
-        }
+                }
+                .onEnded { _ in
+                    isPressed = false
+                    onTapAction?()
+                }
+        )
         .onAppear {
-            withAnimation(
-                .linear(duration: 6)
-                .repeatForever(autoreverses: false)
-            ) {
-                phase = 1.0
+            if configuration.causticAnimation {
+                withAnimation(
+                    .linear(duration: 10 / configuration.causticSpeed)
+                    .repeatForever(autoreverses: false)
+                ) {
+                    phase = 2 * .pi
+                }
             }
         }
+    }
+    
+    // Modifier methods
+    public func onHoverStart(_ action: @escaping () -> Void) -> RefractiveGlassCard {
+        var copy = self
+        copy.onHoverStart = action
+        return copy
+    }
+    
+    public func onHoverEnd(_ action: @escaping () -> Void) -> RefractiveGlassCard {
+        var copy = self
+        copy.onHoverEnd = action
+        return copy
+    }
+    
+    public func onTap(_ action: @escaping () -> Void) -> RefractiveGlassCard {
+        var copy = self
+        copy.onTapAction = action
+        return copy
+    }
+    
+    public func distortionIntensity(_ intensity: Double) -> RefractiveGlassCard {
+        var copy = self
+        copy.configuration.distortionIntensity = intensity
+        return copy
+    }
+    
+    public func chromaticAberration(_ enabled: Bool, strength: CGFloat = 2.0) -> RefractiveGlassCard {
+        var copy = self
+        copy.configuration.chromaticAberration = enabled
+        copy.configuration.aberrationStrength = strength
+        return copy
+    }
+    
+    public func caustics(_ enabled: Bool, speed: Double = 0.5, count: Int = 8) -> RefractiveGlassCard {
+        var copy = self
+        copy.configuration.causticAnimation = enabled
+        copy.configuration.causticSpeed = speed
+        copy.configuration.causticCount = count
+        return copy
+    }
+    
+    public func cornerRadius(_ radius: CGFloat) -> RefractiveGlassCard {
+        var copy = self
+        copy.configuration.cornerRadius = radius
+        return copy
     }
 }
 
 // MARK: - View Extension
 
-extension View {
-    /// Apply a refractive liquid glass effect with lens-like distortion
-    ///
-    /// This premium effect simulates real glass refraction with:
-    /// - Physical lens warping at edges
-    /// - Multi-layer depth
-    /// - Animated liquid glass shimmer
-    /// - Theme-aware coloring
-    ///
-    /// Example:
-    /// ```swift
-    /// VStack {
-    ///     Text("Premium Content")
-    /// }
-    /// .padding()
-    /// .refractiveGlass(intensity: 0.2)
-    /// ```
-    public func refractiveGlass(
-        intensity: CGFloat = 0.15,
-        blurRadius: CGFloat = 20,
-        borderWidth: CGFloat = 1
-    ) -> some View {
-        modifier(RefractiveGlassModifier(
-            intensity: intensity,
-            blurRadius: blurRadius,
-            borderWidth: borderWidth
-        ))
+public extension View {
+    func refractiveGlass(configuration: RefractiveGlassConfiguration = .default) -> some View {
+        self.modifier(RefractiveGlassModifier(configuration: configuration))
     }
-}
-
-// MARK: - Refractive Glass Card Component
-
-/// A drop-in replacement for LuxeCard with advanced refractive glass effects
-public struct RefractiveGlassCard<Content: View>: View {
-    @Environment(\.luxeTheme) private var theme
     
-    let content: Content
-    let distortionIntensity: CGFloat
-    let enableChromatic: Bool
-    
-    @State private var isHovered = false
-    
-    public init(
-        distortionIntensity: CGFloat = 0.2,
+    func refractiveGlass(
+        intensity: Double = 0.2,
+        radius: CGFloat = 50,
         chromaticAberration: Bool = true,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.content = content()
-        self.distortionIntensity = distortionIntensity
-        self.enableChromatic = chromaticAberration
-    }
-    
-    public var body: some View {
-        AdvancedRefractiveGlass(
-            distortionIntensity: distortionIntensity,
-            chromaticAberration: enableChromatic
-        ) {
-            content
-                .padding(theme.spacingL)
-        }
-        .scaleEffect(isHovered ? 1.02 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
-        .onHover { hovering in
-            isHovered = hovering
-        }
+        aberrationStrength: CGFloat = 2.0,
+        causticAnimation: Bool = true,
+        causticSpeed: Double = 0.5,
+        causticCount: Int = 8,
+        layers: Int = 3,
+        blur: CGFloat = 20,
+        cornerRadius: CGFloat = 24
+    ) -> some View {
+        let config = RefractiveGlassConfiguration(
+            distortionIntensity: intensity,
+            distortionRadius: radius,
+            chromaticAberration: chromaticAberration,
+            aberrationStrength: aberrationStrength,
+            causticAnimation: causticAnimation,
+            causticSpeed: causticSpeed,
+            causticCount: causticCount,
+            layerCount: layers,
+            blurRadius: blur,
+            cornerRadius: cornerRadius
+        )
+        return self.modifier(RefractiveGlassModifier(configuration: config))
     }
 }

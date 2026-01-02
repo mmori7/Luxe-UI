@@ -1,197 +1,395 @@
 import SwiftUI
 
-/// A slider component that supports multiple draggable thumbs for range selection.
-///
-/// This component allows users to create sliders with 2 or more thumbs, perfect for
-/// selecting ranges, multi-value inputs, or complex filtering interfaces.
-///
-/// Example usage:
-/// ```swift
-/// @State private var values: [Double] = [0.2, 0.7]
-///
-/// MultiThumbSlider(
-///     values: $values,
-///     range: 0...100
-/// )
-/// ```
-///
-/// With customization:
-/// ```swift
-/// MultiThumbSlider(
-///     values: $values,
-///     range: 0...100,
-///     step: 5,
-///     showLabels: true
-/// )
-/// ```
-public struct MultiThumbSlider: View {
-    @Environment(\.luxeTheme) private var theme
-    @Binding private var values: [Double]
+// MARK: - Multi-Thumb Slider Configuration
+
+public struct MultiThumbSliderConfiguration: Sendable {
+    public var trackHeight: CGFloat
+    public var thumbSize: CGFloat
+    public var trackColor: Color
+    public var trackOpacity: Double
+    public var activeTrackColors: [Color]
+    public var thumbColor: Color
+    public var thumbBorderColor: Color
+    public var thumbBorderWidth: CGFloat
+    public var thumbShadowColor: Color
+    public var thumbShadowRadius: CGFloat
+    public var showLabels: Bool
+    public var labelFontSize: CGFloat
+    public var labelColor: Color
+    public var enableHaptics: Bool
+    public var hapticOnChange: Bool
+    public var hapticOnBoundary: Bool
+    public var animationResponse: Double
+    public var animationDamping: Double
     
-    private let range: ClosedRange<Double>
-    private let step: Double?
-    private let trackHeight: CGFloat
-    private let thumbSize: CGFloat
-    private let showLabels: Bool
-    private let trackColor: Color?
-    private let activeTrackColor: Color?
-    private let thumbColor: Color?
-    
-    @State private var draggedIndex: Int?
-    @State private var sliderWidth: CGFloat = 0
-    
-    /// Creates a multi-thumb slider
-    /// - Parameters:
-    ///   - values: Binding to array of values (must have at least 2 elements)
-    ///   - range: The range of valid values
-    ///   - step: Optional step increment (nil for continuous)
-    ///   - trackHeight: Height of the slider track (default: 6)
-    ///   - thumbSize: Size of the draggable thumbs (default: 24)
-    ///   - showLabels: Whether to show value labels above thumbs (default: false)
-    ///   - trackColor: Color of the inactive track (default: uses theme)
-    ///   - activeTrackColor: Color of the active track between thumbs (default: uses theme)
-    ///   - thumbColor: Color of the thumb handles (default: uses theme)
     public init(
-        values: Binding<[Double]>,
-        range: ClosedRange<Double>,
-        step: Double? = nil,
         trackHeight: CGFloat = 6,
         thumbSize: CGFloat = 24,
-        showLabels: Bool = false,
-        trackColor: Color? = nil,
-        activeTrackColor: Color? = nil,
-        thumbColor: Color? = nil
+        trackColor: Color = .gray,
+        trackOpacity: Double = 0.3,
+        activeTrackColors: [Color] = [.blue, .purple],
+        thumbColor: Color = .white,
+        thumbBorderColor: Color = .blue,
+        thumbBorderWidth: CGFloat = 2,
+        thumbShadowColor: Color = .black,
+        thumbShadowRadius: CGFloat = 4,
+        showLabels: Bool = true,
+        labelFontSize: CGFloat = 12,
+        labelColor: Color = .white,
+        enableHaptics: Bool = true,
+        hapticOnChange: Bool = false,
+        hapticOnBoundary: Bool = true,
+        animationResponse: Double = 0.2,
+        animationDamping: Double = 0.8
+    ) {
+        self.trackHeight = trackHeight
+        self.thumbSize = thumbSize
+        self.trackColor = trackColor
+        self.trackOpacity = trackOpacity
+        self.activeTrackColors = activeTrackColors
+        self.thumbColor = thumbColor
+        self.thumbBorderColor = thumbBorderColor
+        self.thumbBorderWidth = thumbBorderWidth
+        self.thumbShadowColor = thumbShadowColor
+        self.thumbShadowRadius = thumbShadowRadius
+        self.showLabels = showLabels
+        self.labelFontSize = labelFontSize
+        self.labelColor = labelColor
+        self.enableHaptics = enableHaptics
+        self.hapticOnChange = hapticOnChange
+        self.hapticOnBoundary = hapticOnBoundary
+        self.animationResponse = animationResponse
+        self.animationDamping = animationDamping
+    }
+    
+    // Presets
+    public static let `default` = MultiThumbSliderConfiguration()
+    
+    public static let compact = MultiThumbSliderConfiguration(
+        trackHeight: 4,
+        thumbSize: 18,
+        thumbBorderWidth: 1,
+        labelFontSize: 10
+    )
+    
+    public static let large = MultiThumbSliderConfiguration(
+        trackHeight: 8,
+        thumbSize: 32,
+        thumbBorderWidth: 3,
+        labelFontSize: 14
+    )
+    
+    public static let minimal = MultiThumbSliderConfiguration(
+        trackHeight: 2,
+        thumbSize: 16,
+        thumbBorderWidth: 0,
+        showLabels: false
+    )
+    
+    public static let vibrant = MultiThumbSliderConfiguration(
+        trackHeight: 6,
+        thumbSize: 26,
+        activeTrackColors: [.cyan, .blue, .purple],
+        thumbBorderColor: .cyan,
+        thumbShadowRadius: 8
+    )
+}
+
+// MARK: - Multi-Thumb Slider
+
+public struct MultiThumbSlider: View {
+    @Binding private var values: [Double]
+    private let range: ClosedRange<Double>
+    private let step: Double
+    private var configuration: MultiThumbSliderConfiguration
+    
+    // Callbacks
+    private var onValueChange: (([Double]) -> Void)?
+    private var onDragStart: ((Int) -> Void)?
+    private var onDragEnd: ((Int) -> Void)?
+    
+    @State private var activeThumb: Int? = nil
+    @State private var lastHapticValue: [Double] = []
+    
+    public init(
+        values: Binding<[Double]>,
+        range: ClosedRange<Double> = 0...100,
+        step: Double = 1,
+        configuration: MultiThumbSliderConfiguration = .default
     ) {
         self._values = values
         self.range = range
         self.step = step
-        self.trackHeight = trackHeight
-        self.thumbSize = thumbSize
-        self.showLabels = showLabels
-        self.trackColor = trackColor
-        self.activeTrackColor = activeTrackColor
-        self.thumbColor = thumbColor
+        self.configuration = configuration
+    }
+    
+    // Convenience initializer with common parameters
+    public init(
+        values: Binding<[Double]>,
+        range: ClosedRange<Double> = 0...100,
+        step: Double = 1,
+        showLabels: Bool = true,
+        colors: [Color]? = nil
+    ) {
+        self._values = values
+        self.range = range
+        self.step = step
+        var config = MultiThumbSliderConfiguration()
+        config.showLabels = showLabels
+        if let colors = colors {
+            config.activeTrackColors = colors
+        }
+        self.configuration = config
+    }
+    
+    private func normalizedPosition(for value: Double) -> Double {
+        (value - range.lowerBound) / (range.upperBound - range.lowerBound)
+    }
+    
+    private func valueForPosition(_ position: Double) -> Double {
+        let rawValue = range.lowerBound + position * (range.upperBound - range.lowerBound)
+        let steppedValue = (rawValue / step).rounded() * step
+        return min(max(steppedValue, range.lowerBound), range.upperBound)
     }
     
     public var body: some View {
-        VStack(spacing: theme.spacingS) {
-            // Value labels
-            if showLabels {
-                HStack {
-                    ForEach(sortedValues.indices, id: \.self) { index in
-                        Text(formatValue(sortedValues[index]))
-                            .font(.system(size: theme.fontSizeCaption, weight: theme.fontWeightMedium))
-                            .foregroundColor(theme.textSecondary)
-                        
-                        if index < sortedValues.count - 1 {
-                            Spacer()
-                        }
-                    }
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // Background track
+                Capsule()
+                    .fill(configuration.trackColor.opacity(configuration.trackOpacity))
+                    .frame(height: configuration.trackHeight)
+                
+                // Active track (between thumbs for range slider)
+                if values.count >= 2 {
+                    let sortedValues = values.sorted()
+                    let startX = geometry.size.width * normalizedPosition(for: sortedValues[0])
+                    let endX = geometry.size.width * normalizedPosition(for: sortedValues[1])
+                    
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: configuration.activeTrackColors,
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: endX - startX, height: configuration.trackHeight)
+                        .offset(x: startX)
+                } else if values.count == 1 {
+                    // Single thumb - fill from start
+                    let endX = geometry.size.width * normalizedPosition(for: values[0])
+                    
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: configuration.activeTrackColors,
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: endX, height: configuration.trackHeight)
                 }
+                
+                // Thumbs
+                ForEach(values.indices, id: \.self) { index in
+                    ThumbView(
+                        value: values[index],
+                        isActive: activeThumb == index,
+                        configuration: configuration,
+                        showLabel: configuration.showLabels
+                    )
+                    .position(
+                        x: geometry.size.width * normalizedPosition(for: values[index]),
+                        y: geometry.size.height / 2
+                    )
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { gesture in
+                                if activeThumb != index {
+                                    activeThumb = index
+                                    onDragStart?(index)
+                                    if configuration.enableHaptics {
+                                        TactileFeedback.light()
+                                    }
+                                }
+                                
+                                let position = gesture.location.x / geometry.size.width
+                                let clampedPosition = min(max(position, 0), 1)
+                                let newValue = valueForPosition(clampedPosition)
+                                
+                                // Ensure values don't cross each other
+                                var constrainedValue = newValue
+                                if values.count > 1 {
+                                    if index == 0 {
+                                        constrainedValue = min(newValue, values[1] - step)
+                                    } else if index == 1 {
+                                        constrainedValue = max(newValue, values[0] + step)
+                                    }
+                                }
+                                
+                                if values[index] != constrainedValue {
+                                    values[index] = constrainedValue
+                                    onValueChange?(values)
+                                    
+                                    // Haptic on step change
+                                    if configuration.enableHaptics && configuration.hapticOnChange {
+                                        TactileFeedback.light()
+                                    }
+                                    
+                                    // Haptic on boundary
+                                    if configuration.enableHaptics && configuration.hapticOnBoundary {
+                                        if constrainedValue == range.lowerBound || constrainedValue == range.upperBound {
+                                            TactileFeedback.medium()
+                                        }
+                                    }
+                                }
+                            }
+                            .onEnded { _ in
+                                onDragEnd?(activeThumb ?? index)
+                                activeThumb = nil
+                                if configuration.enableHaptics {
+                                    TactileFeedback.light()
+                                }
+                            }
+                    )
+                }
+            }
+            .frame(height: max(configuration.thumbSize, configuration.trackHeight))
+        }
+        .frame(height: configuration.thumbSize + (configuration.showLabels ? 30 : 0))
+    }
+    
+    // Modifier methods
+    public func onValueChange(_ action: @escaping ([Double]) -> Void) -> MultiThumbSlider {
+        var copy = self
+        copy.onValueChange = action
+        return copy
+    }
+    
+    public func onDragStart(_ action: @escaping (Int) -> Void) -> MultiThumbSlider {
+        var copy = self
+        copy.onDragStart = action
+        return copy
+    }
+    
+    public func onDragEnd(_ action: @escaping (Int) -> Void) -> MultiThumbSlider {
+        var copy = self
+        copy.onDragEnd = action
+        return copy
+    }
+    
+    public func colors(_ colors: [Color]) -> MultiThumbSlider {
+        var copy = self
+        copy.configuration.activeTrackColors = colors
+        return copy
+    }
+    
+    public func thumbSize(_ size: CGFloat) -> MultiThumbSlider {
+        var copy = self
+        copy.configuration.thumbSize = size
+        return copy
+    }
+    
+    public func trackHeight(_ height: CGFloat) -> MultiThumbSlider {
+        var copy = self
+        copy.configuration.trackHeight = height
+        return copy
+    }
+    
+    public func showLabels(_ show: Bool) -> MultiThumbSlider {
+        var copy = self
+        copy.configuration.showLabels = show
+        return copy
+    }
+    
+    public func haptics(_ enabled: Bool, onChange: Bool = false, onBoundary: Bool = true) -> MultiThumbSlider {
+        var copy = self
+        copy.configuration.enableHaptics = enabled
+        copy.configuration.hapticOnChange = onChange
+        copy.configuration.hapticOnBoundary = onBoundary
+        return copy
+    }
+}
+
+// MARK: - Thumb View
+
+private struct ThumbView: View {
+    let value: Double
+    let isActive: Bool
+    let configuration: MultiThumbSliderConfiguration
+    let showLabel: Bool
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            if showLabel {
+                Text("\(Int(value))")
+                    .font(.system(size: configuration.labelFontSize, weight: .medium))
+                    .foregroundColor(configuration.labelColor)
+                    .opacity(isActive ? 1 : 0.7)
             }
             
-            // Slider
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Background track
-                    RoundedRectangle(cornerRadius: trackHeight / 2)
-                        .fill(trackColor ?? theme.secondaryBackgroundColor)
-                        .frame(height: trackHeight)
-                    
-                    // Active track segments
-                    ForEach(0..<max(sortedValues.count - 1, 0), id: \.self) { index in
-                        activeTrackSegment(
-                            from: sortedValues[index],
-                            to: sortedValues[index + 1],
-                            in: geometry.size.width
+            Circle()
+                .fill(configuration.thumbColor)
+                .frame(width: configuration.thumbSize, height: configuration.thumbSize)
+                .overlay(
+                    Circle()
+                        .stroke(
+                            isActive 
+                                ? configuration.thumbBorderColor 
+                                : configuration.thumbBorderColor.opacity(0.5),
+                            lineWidth: configuration.thumbBorderWidth
                         )
-                    }
-                    
-                    // Thumbs
-                    ForEach(values.indices, id: \.self) { index in
-                        thumb(for: index, in: geometry.size.width)
-                            .gesture(
-                                DragGesture(minimumDistance: 0)
-                                    .onChanged { value in
-                                        handleDrag(value: value, index: index, width: geometry.size.width)
-                                    }
-                                    .onEnded { _ in
-                                        draggedIndex = nil
-                                    }
-                            )
+                )
+                .shadow(
+                    color: configuration.thumbShadowColor.opacity(isActive ? 0.4 : 0.2),
+                    radius: isActive ? configuration.thumbShadowRadius * 1.5 : configuration.thumbShadowRadius,
+                    y: 2
+                )
+                .scaleEffect(isActive ? 1.15 : 1.0)
+                .animation(
+                    .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+                    value: isActive
+                )
+        }
+    }
+}
+
+// MARK: - Single Thumb Slider
+
+public struct LuxeSlider: View {
+    @Binding private var value: Double
+    private let range: ClosedRange<Double>
+    private let step: Double
+    private var configuration: MultiThumbSliderConfiguration
+    
+    @State private var values: [Double] = []
+    
+    public init(
+        value: Binding<Double>,
+        range: ClosedRange<Double> = 0...100,
+        step: Double = 1,
+        configuration: MultiThumbSliderConfiguration = .default
+    ) {
+        self._value = value
+        self.range = range
+        self.step = step
+        self.configuration = configuration
+    }
+    
+    public var body: some View {
+        MultiThumbSlider(
+            values: Binding(
+                get: { [value] },
+                set: { newValues in
+                    if let first = newValues.first {
+                        value = first
                     }
                 }
-                .onAppear {
-                    sliderWidth = geometry.size.width
-                }
-            }
-            .frame(height: thumbSize)
-        }
-    }
-    
-    private var sortedValues: [Double] {
-        values.sorted()
-    }
-    
-    private func activeTrackSegment(from: Double, to: Double, in width: CGFloat) -> some View {
-        let startX = positionForValue(from, width: width)
-        let endX = positionForValue(to, width: width)
-        
-        return RoundedRectangle(cornerRadius: trackHeight / 2)
-            .fill(activeTrackColor ?? theme.primaryColor)
-            .frame(width: endX - startX, height: trackHeight)
-            .offset(x: startX)
-    }
-    
-    private func thumb(for index: Int, in width: CGFloat) -> some View {
-        let position = positionForValue(values[index], width: width)
-        let isBeingDragged = draggedIndex == index
-        
-        return Circle()
-            .fill(thumbColor ?? theme.primaryColor)
-            .frame(width: thumbSize, height: thumbSize)
-            .shadow(
-                color: Color.black.opacity(0.2),
-                radius: isBeingDragged ? 8 : 4,
-                y: isBeingDragged ? 4 : 2
-            )
-            .overlay(
-                Circle()
-                    .strokeBorder(Color.white, lineWidth: 2)
-            )
-            .scaleEffect(isBeingDragged ? 1.15 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isBeingDragged)
-            .position(x: position, y: thumbSize / 2)
-    }
-    
-    private func positionForValue(_ value: Double, width: CGFloat) -> CGFloat {
-        let normalizedValue = (value - range.lowerBound) / (range.upperBound - range.lowerBound)
-        return CGFloat(normalizedValue) * width
-    }
-    
-    private func valueForPosition(_ position: CGFloat, width: CGFloat) -> Double {
-        let normalizedPosition = max(0, min(1, position / width))
-        var value = range.lowerBound + Double(normalizedPosition) * (range.upperBound - range.lowerBound)
-        
-        // Apply step if specified
-        if let step = step {
-            value = round(value / step) * step
-        }
-        
-        return max(range.lowerBound, min(range.upperBound, value))
-    }
-    
-    private func handleDrag(value: DragGesture.Value, index: Int, width: CGFloat) {
-        draggedIndex = index
-        let newValue = valueForPosition(value.location.x, width: width)
-        values[index] = newValue
-    }
-    
-    private func formatValue(_ value: Double) -> String {
-        if let step = step, step >= 1 {
-            return String(format: "%.0f", value)
-        } else {
-            return String(format: "%.1f", value)
-        }
+            ),
+            range: range,
+            step: step,
+            configuration: configuration
+        )
     }
 }

@@ -1,382 +1,429 @@
 import SwiftUI
 
-// MARK: - Smart Spring Engine
+// MARK: - Smart Spring Configuration
 
-/// A velocity-aware spring animation engine that responds to gesture speed
-/// Provides tactile, physics-based micro-interactions for 2026 UIs
-public struct SmartSpringModifier: ViewModifier {
-    @Environment(\.luxeTheme) private var theme
-    
-    @GestureState private var dragVelocity: CGSize = .zero
-    @State private var scale: CGFloat = 1.0
-    @State private var rotation: Double = 0.0
-    @State private var offset: CGSize = .zero
-    
-    let sensitivity: CGFloat
-    let enableRotation: Bool
-    let enableOffset: Bool
+public struct SmartSpringConfiguration: Sendable {
+    public var sensitivity: Double
+    public var enableRotation: Bool
+    public var rotationMultiplier: Double
+    public var maxOffset: CGFloat
+    public var maxRotation: Double
+    public var responseSpeed: Double
+    public var dampingFraction: Double
+    public var velocityThreshold: CGFloat
+    public var enableHaptics: Bool
+    public var hapticIntensity: TactileFeedback.Intensity
     
     public init(
-        sensitivity: CGFloat = 1.0,
-        enableRotation: Bool = true,
-        enableOffset: Bool = true
+        sensitivity: Double = 1.0,
+        enableRotation: Bool = false,
+        rotationMultiplier: Double = 1.0,
+        maxOffset: CGFloat = 100,
+        maxRotation: Double = 15,
+        responseSpeed: Double = 0.3,
+        dampingFraction: Double = 0.7,
+        velocityThreshold: CGFloat = 500,
+        enableHaptics: Bool = true,
+        hapticIntensity: TactileFeedback.Intensity = .light
     ) {
         self.sensitivity = sensitivity
         self.enableRotation = enableRotation
-        self.enableOffset = enableOffset
+        self.rotationMultiplier = rotationMultiplier
+        self.maxOffset = maxOffset
+        self.maxRotation = maxRotation
+        self.responseSpeed = responseSpeed
+        self.dampingFraction = dampingFraction
+        self.velocityThreshold = velocityThreshold
+        self.enableHaptics = enableHaptics
+        self.hapticIntensity = hapticIntensity
+    }
+    
+    // Presets
+    public static let `default` = SmartSpringConfiguration()
+    
+    public static let bouncy = SmartSpringConfiguration(
+        sensitivity: 1.5,
+        responseSpeed: 0.4,
+        dampingFraction: 0.5
+    )
+    
+    public static let stiff = SmartSpringConfiguration(
+        sensitivity: 0.5,
+        responseSpeed: 0.2,
+        dampingFraction: 0.9
+    )
+    
+    public static let wobbly = SmartSpringConfiguration(
+        sensitivity: 1.2,
+        enableRotation: true,
+        rotationMultiplier: 1.5,
+        dampingFraction: 0.4
+    )
+    
+    public static let subtle = SmartSpringConfiguration(
+        sensitivity: 0.3,
+        maxOffset: 30,
+        responseSpeed: 0.2
+    )
+}
+
+// MARK: - Smart Spring Modifier
+
+public struct SmartSpringModifier: ViewModifier {
+    private let configuration: SmartSpringConfiguration
+    
+    @State private var offset: CGSize = .zero
+    @State private var rotation: Double = 0
+    @GestureState private var dragVelocity: CGSize = .zero
+    
+    public init(configuration: SmartSpringConfiguration = .default) {
+        self.configuration = configuration
     }
     
     public func body(content: Content) -> some View {
         content
-            .scaleEffect(scale)
-            .rotationEffect(.degrees(rotation))
             .offset(offset)
+            .rotationEffect(.degrees(configuration.enableRotation ? rotation : 0))
             .gesture(
-                DragGesture(minimumDistance: 0)
+                DragGesture()
                     .updating($dragVelocity) { value, state, _ in
-                        state = CGSize(
-                            width: value.translation.width - value.predictedEndTranslation.width,
-                            height: value.translation.height - value.predictedEndTranslation.height
-                        )
+                        state = value.translation
                     }
                     .onChanged { value in
-                        // Calculate velocity from gesture
-                        let velocity = sqrt(
-                            pow(value.predictedEndTranslation.width - value.translation.width, 2) +
-                            pow(value.predictedEndTranslation.height - value.translation.height, 2)
-                        )
+                        let velocity = hypot(value.velocity.width, value.velocity.height)
+                        let velocityFactor = min(velocity / configuration.velocityThreshold, 2.0)
+                        let scaledSensitivity = configuration.sensitivity * (1.0 + velocityFactor * 0.5)
                         
-                        // Scale based on velocity - faster = more dramatic
-                        let velocityScale = min(velocity / 100.0, 1.0) * sensitivity
+                        withAnimation(.spring(
+                            response: configuration.responseSpeed,
+                            dampingFraction: configuration.dampingFraction
+                        )) {
+                            offset = CGSize(
+                                width: min(max(value.translation.width * scaledSensitivity, -configuration.maxOffset), configuration.maxOffset),
+                                height: min(max(value.translation.height * scaledSensitivity, -configuration.maxOffset), configuration.maxOffset)
+                            )
+                            
+                            if configuration.enableRotation {
+                                rotation = Double(value.translation.width / 20) * configuration.rotationMultiplier
+                                rotation = min(max(rotation, -configuration.maxRotation), configuration.maxRotation)
+                            }
+                        }
                         
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                            scale = 1.0 - (velocityScale * 0.05)
-                            
-                            if enableRotation {
-                                rotation = Double(value.translation.width / 20.0 * sensitivity)
-                            }
-                            
-                            if enableOffset {
-                                offset = CGSize(
-                                    width: value.translation.width * 0.3,
-                                    height: value.translation.height * 0.3
-                                )
-                            }
+                        if velocity > configuration.velocityThreshold && configuration.enableHaptics {
+                            TactileFeedback.trigger(configuration.hapticIntensity)
                         }
                     }
                     .onEnded { value in
-                        // Spring back with velocity-aware timing
-                        let velocity = sqrt(
-                            pow(value.predictedEndTranslation.width, 2) +
-                            pow(value.predictedEndTranslation.height, 2)
-                        )
+                        let velocity = hypot(value.velocity.width, value.velocity.height)
                         
-                        let springResponse = max(0.3, min(0.6, 0.3 + velocity / 1000.0))
-                        
-                        withAnimation(.spring(response: springResponse, dampingFraction: 0.7)) {
-                            scale = 1.0
-                            rotation = 0.0
+                        withAnimation(.spring(
+                            response: configuration.responseSpeed,
+                            dampingFraction: configuration.dampingFraction
+                        )) {
                             offset = .zero
+                            rotation = 0
+                        }
+                        
+                        if velocity > configuration.velocityThreshold * 1.5 && configuration.enableHaptics {
+                            TactileFeedback.medium()
                         }
                     }
             )
     }
 }
 
-// MARK: - Magnetic Pull Effect
+// MARK: - Magnetic Pull Configuration
 
-/// Creates a magnetic attraction effect - UI elements "pull" toward cursor/touch
-public struct MagneticPullModifier: ViewModifier {
-    @Environment(\.luxeTheme) private var theme
-    
-    @State private var hoverLocation: CGPoint = .zero
-    @State private var isHovering: Bool = false
-    @State private var magneticOffset: CGSize = .zero
-    @State private var magneticScale: CGFloat = 1.0
-    @State private var glowIntensity: CGFloat = 0.0
-    
-    let radius: CGFloat
-    let strength: CGFloat
-    let enableGlow: Bool
+public struct MagneticPullConfiguration: Sendable {
+    public var radius: CGFloat
+    public var strength: Double
+    public var maxOffset: CGFloat
+    public var responseSpeed: Double
+    public var dampingFraction: Double
+    public var enableHaptics: Bool
+    public var hapticOnEnter: Bool
     
     public init(
         radius: CGFloat = 100,
-        strength: CGFloat = 0.3,
-        enableGlow: Bool = true
+        strength: Double = 0.5,
+        maxOffset: CGFloat = 20,
+        responseSpeed: Double = 0.3,
+        dampingFraction: Double = 0.7,
+        enableHaptics: Bool = true,
+        hapticOnEnter: Bool = true
     ) {
         self.radius = radius
         self.strength = strength
-        self.enableGlow = enableGlow
+        self.maxOffset = maxOffset
+        self.responseSpeed = responseSpeed
+        self.dampingFraction = dampingFraction
+        self.enableHaptics = enableHaptics
+        self.hapticOnEnter = hapticOnEnter
+    }
+    
+    public static let `default` = MagneticPullConfiguration()
+    
+    public static let strong = MagneticPullConfiguration(
+        radius: 150,
+        strength: 0.8,
+        maxOffset: 30
+    )
+    
+    public static let subtle = MagneticPullConfiguration(
+        radius: 80,
+        strength: 0.3,
+        maxOffset: 10
+    )
+    
+    public static let wide = MagneticPullConfiguration(
+        radius: 200,
+        strength: 0.4,
+        maxOffset: 25
+    )
+}
+
+// MARK: - Magnetic Pull Modifier
+
+public struct MagneticPullModifier: ViewModifier {
+    private let configuration: MagneticPullConfiguration
+    
+    @State private var offset: CGSize = .zero
+    @State private var isInRange = false
+    
+    public init(configuration: MagneticPullConfiguration = .default) {
+        self.configuration = configuration
     }
     
     public func body(content: Content) -> some View {
-        GeometryReader { geometry in
-            content
-                .offset(magneticOffset)
-                .scaleEffect(magneticScale)
-                .shadow(
-                    color: theme.primaryColor.opacity(enableGlow ? glowIntensity * 0.6 : 0),
-                    radius: 20 * glowIntensity,
-                    x: 0,
-                    y: 0
-                )
-                .onHover { hovering in
-                    isHovering = hovering
-                    if !hovering {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            magneticOffset = .zero
-                            magneticScale = 1.0
-                            glowIntensity = 0.0
-                        }
-                    }
+        content
+            .offset(offset)
+            .animation(
+                .spring(response: configuration.responseSpeed, dampingFraction: configuration.dampingFraction),
+                value: offset
+            )
+            .onHover { hovering in
+                // Fallback for platforms without onContinuousHover
+                if !hovering {
+                    isInRange = false
+                    offset = .zero
                 }
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            guard isHovering else { return }
-                            
-                            let location = value.location
-                            let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
-                            let distance = sqrt(
-                                pow(location.x - center.x, 2) +
-                                pow(location.y - center.y, 2)
-                            )
-                            
-                            // Only activate within radius
-                            if distance < radius {
-                                let normalizedDistance = distance / radius
-                                let pullStrength = (1.0 - normalizedDistance) * strength
-                                
-                                // Calculate pull direction
-                                let angle = atan2(location.y - center.y, location.x - center.x)
-                                
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    magneticOffset = CGSize(
-                                        width: cos(angle) * pullStrength * 15,
-                                        height: sin(angle) * pullStrength * 15
-                                    )
-                                    magneticScale = 1.0 + (pullStrength * 0.05)
-                                    glowIntensity = pullStrength
-                                }
-                            } else {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                    magneticOffset = .zero
-                                    magneticScale = 1.0
-                                    glowIntensity = 0.0
-                                }
-                            }
-                        }
-                )
-                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-        }
+            }
     }
 }
 
-// MARK: - Tactile Feedback System
+// MARK: - Smart Spring Button Configuration
 
-/// High-fidelity haptic feedback system for micro-interactions
-public struct TactileFeedback {
-    public enum Style {
-        case light
-        case medium
-        case heavy
-        case success
-        case warning
-        case error
+public struct SmartSpringButtonConfiguration: Sendable {
+    public var cornerRadius: CGFloat
+    public var padding: CGFloat
+    public var shadowRadius: CGFloat
+    public var pressScale: CGFloat
+    public var hoverScale: CGFloat
+    public var gradient: [Color]
+    public var enableHaptics: Bool
+    public var hapticIntensity: TactileFeedback.Intensity
+    public var animationResponse: Double
+    public var animationDamping: Double
+    
+    public init(
+        cornerRadius: CGFloat = 16,
+        padding: CGFloat = 20,
+        shadowRadius: CGFloat = 15,
+        pressScale: CGFloat = 0.95,
+        hoverScale: CGFloat = 1.05,
+        gradient: [Color] = [.purple, .pink],
+        enableHaptics: Bool = true,
+        hapticIntensity: TactileFeedback.Intensity = .medium,
+        animationResponse: Double = 0.3,
+        animationDamping: Double = 0.7
+    ) {
+        self.cornerRadius = cornerRadius
+        self.padding = padding
+        self.shadowRadius = shadowRadius
+        self.pressScale = pressScale
+        self.hoverScale = hoverScale
+        self.gradient = gradient
+        self.enableHaptics = enableHaptics
+        self.hapticIntensity = hapticIntensity
+        self.animationResponse = animationResponse
+        self.animationDamping = animationDamping
     }
     
-    #if os(iOS)
-    public static func trigger(_ style: Style) {
-        let generator: UIImpactFeedbackGenerator
-        
-        switch style {
-        case .light:
-            generator = UIImpactFeedbackGenerator(style: .light)
-        case .medium:
-            generator = UIImpactFeedbackGenerator(style: .medium)
-        case .heavy:
-            generator = UIImpactFeedbackGenerator(style: .heavy)
-        case .success:
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            return
-        case .warning:
-            UINotificationFeedbackGenerator().notificationOccurred(.warning)
-            return
-        case .error:
-            UINotificationFeedbackGenerator().notificationOccurred(.error)
-            return
-        }
-        
-        generator.prepare()
-        generator.impactOccurred()
-    }
-    #else
-    public static func trigger(_ style: Style) {
-        // macOS haptics (limited support)
-        NSHapticFeedbackManager.defaultPerformer.perform(
-            .generic,
-            performanceTime: .default
-        )
-    }
-    #endif
+    public static let `default` = SmartSpringButtonConfiguration()
+    
+    public static let magnetic = SmartSpringButtonConfiguration(
+        cornerRadius: 20,
+        padding: 24,
+        shadowRadius: 20,
+        hoverScale: 1.08,
+        gradient: [.cyan, .blue]
+    )
+    
+    public static let compact = SmartSpringButtonConfiguration(
+        cornerRadius: 12,
+        padding: 14,
+        shadowRadius: 10,
+        hoverScale: 1.03
+    )
+}
+
+public enum SmartSpringButtonStyle: Sendable {
+    case standard
+    case magnetic
+    case custom(SmartSpringButtonConfiguration)
 }
 
 // MARK: - Smart Spring Button
 
-/// Button with velocity-aware springs and magnetic pull
 public struct SmartSpringButton<Label: View>: View {
-    @Environment(\.luxeTheme) private var theme
+    private let action: () -> Void
+    private let label: Label
+    private let style: SmartSpringButtonStyle
+    private var configuration: SmartSpringButtonConfiguration
     
-    let label: Label
-    let style: ButtonStyle
-    let action: () -> Void
-    
-    @State private var isPressed: Bool = false
-    @State private var scale: CGFloat = 1.0
-    
-    public enum ButtonStyle {
-        case primary
-        case secondary
-        case magnetic
-    }
+    @State private var isPressed = false
+    @State private var isHovered = false
+    @State private var magneticOffset: CGSize = .zero
     
     public init(
-        style: ButtonStyle = .primary,
+        style: SmartSpringButtonStyle = .standard,
         action: @escaping () -> Void,
         @ViewBuilder label: () -> Label
     ) {
         self.style = style
         self.action = action
         self.label = label()
+        
+        switch style {
+        case .standard:
+            self.configuration = .default
+        case .magnetic:
+            self.configuration = .magnetic
+        case .custom(let config):
+            self.configuration = config
+        }
     }
     
     public var body: some View {
         Button(action: {
-            TactileFeedback.trigger(.medium)
+            if configuration.enableHaptics {
+                TactileFeedback.trigger(configuration.hapticIntensity)
+            }
             action()
         }) {
             label
-                .padding(.horizontal, theme.spacingL)
-                .padding(.vertical, theme.spacingM)
-                .background(backgroundView)
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: theme.cornerRadiusMedium))
+                .padding(configuration.padding)
+                .background(
+                    LinearGradient(
+                        colors: configuration.gradient,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: configuration.cornerRadius))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: configuration.cornerRadius)
+                        .stroke(.white.opacity(0.2), lineWidth: 1)
+                )
+                .shadow(
+                    color: configuration.gradient.first?.opacity(0.4) ?? .purple.opacity(0.4),
+                    radius: configuration.shadowRadius,
+                    y: 8
+                )
         }
-        .buttonStyle(PlainButtonStyle())
-        .scaleEffect(scale)
-        .modifier(SmartSpringModifier(sensitivity: 0.8, enableRotation: false))
-        .modifier(
-            style == .magnetic ?
-            AnyViewModifier(MagneticPullModifier(radius: 80, strength: 0.4)) :
-            AnyViewModifier(EmptyModifier())
+        .buttonStyle(.plain)
+        .scaleEffect(isPressed ? configuration.pressScale : (isHovered ? configuration.hoverScale : 1.0))
+        .offset(magneticOffset)
+        .animation(
+            .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+            value: isPressed
         )
-        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                scale = pressing ? 0.95 : 1.0
-            }
-            if pressing {
-                TactileFeedback.trigger(.light)
-            }
-        }, perform: {})
-    }
-    
-    @ViewBuilder
-    private var backgroundView: some View {
-        switch style {
-        case .primary:
-            LinearGradient(
-                colors: [theme.primaryColor, theme.secondaryColor],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .secondary:
-            theme.secondaryColor.opacity(0.3)
-        case .magnetic:
-            ZStack {
-                LinearGradient(
-                    colors: [theme.accentColor, theme.primaryColor],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                
-                // Animated shimmer
-                LinearGradient(
-                    colors: [
-                        .clear,
-                        .white.opacity(0.3),
-                        .clear
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .blendMode(.overlay)
+        .animation(
+            .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+            value: isHovered
+        )
+        .animation(
+            .spring(response: configuration.animationResponse, dampingFraction: configuration.animationDamping),
+            value: magneticOffset
+        )
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
+        .onHover { hovering in
+            isHovered = hovering
+            if !hovering {
+                magneticOffset = .zero
             }
         }
     }
-}
-
-// MARK: - Helper Wrappers
-
-private struct AnyViewModifier: ViewModifier {
-    let modifier: any ViewModifier
     
-    init<M: ViewModifier>(_ modifier: M) {
-        self.modifier = modifier
+    // Modifier methods
+    public func gradient(_ colors: [Color]) -> SmartSpringButton {
+        var copy = self
+        copy.configuration.gradient = colors
+        return copy
     }
     
-    func body(content: Content) -> some View {
-        content
+    public func cornerRadius(_ radius: CGFloat) -> SmartSpringButton {
+        var copy = self
+        copy.configuration.cornerRadius = radius
+        return copy
     }
-}
-
-private struct EmptyModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        content
+    
+    public func haptics(_ enabled: Bool, intensity: TactileFeedback.Intensity = .medium) -> SmartSpringButton {
+        var copy = self
+        copy.configuration.enableHaptics = enabled
+        copy.configuration.hapticIntensity = intensity
+        return copy
     }
 }
 
 // MARK: - View Extensions
 
-extension View {
-    /// Apply smart spring micro-interactions with velocity-aware physics
-    ///
-    /// Responds to gesture speed for tactile feedback
-    ///
-    /// Example:
-    /// ```swift
-    /// LuxeCard { }
-    ///     .smartSprings(sensitivity: 1.0)
-    /// ```
-    public func smartSprings(
-        sensitivity: CGFloat = 1.0,
-        enableRotation: Bool = true,
-        enableOffset: Bool = true
-    ) -> some View {
-        modifier(SmartSpringModifier(
-            sensitivity: sensitivity,
-            enableRotation: enableRotation,
-            enableOffset: enableOffset
-        ))
+public extension View {
+    func smartSprings(configuration: SmartSpringConfiguration = .default) -> some View {
+        self.modifier(SmartSpringModifier(configuration: configuration))
     }
     
-    /// Apply magnetic pull effect - UI tilts toward cursor/touch
-    ///
-    /// Creates subtle attraction within specified radius
-    ///
-    /// Example:
-    /// ```swift
-    /// LuxeButton("Click") { }
-    ///     .magneticPull(radius: 100, strength: 0.3)
-    /// ```
-    public func magneticPull(
-        radius: CGFloat = 100,
-        strength: CGFloat = 0.3,
-        enableGlow: Bool = true
+    func smartSprings(
+        sensitivity: Double = 1.0,
+        enableRotation: Bool = false,
+        rotationMultiplier: Double = 1.0,
+        maxOffset: CGFloat = 100,
+        responseSpeed: Double = 0.3,
+        dampingFraction: Double = 0.7,
+        enableHaptics: Bool = true
     ) -> some View {
-        modifier(MagneticPullModifier(
+        let config = SmartSpringConfiguration(
+            sensitivity: sensitivity,
+            enableRotation: enableRotation,
+            rotationMultiplier: rotationMultiplier,
+            maxOffset: maxOffset,
+            responseSpeed: responseSpeed,
+            dampingFraction: dampingFraction,
+            enableHaptics: enableHaptics
+        )
+        return self.modifier(SmartSpringModifier(configuration: config))
+    }
+    
+    func magneticPull(configuration: MagneticPullConfiguration = .default) -> some View {
+        self.modifier(MagneticPullModifier(configuration: configuration))
+    }
+    
+    func magneticPull(
+        radius: CGFloat = 100,
+        strength: Double = 0.5,
+        maxOffset: CGFloat = 20,
+        enableHaptics: Bool = true
+    ) -> some View {
+        let config = MagneticPullConfiguration(
             radius: radius,
             strength: strength,
-            enableGlow: enableGlow
-        ))
+            maxOffset: maxOffset,
+            enableHaptics: enableHaptics
+        )
+        return self.modifier(MagneticPullModifier(configuration: config))
     }
 }
