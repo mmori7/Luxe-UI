@@ -387,6 +387,10 @@ LuxeUI is built with best practices:
 - ✅ **Type-safe** design tokens
 - ✅ **Sendable** compliance for Swift 6
 
+dependencies: [
+    .package(url: "https://github.com/Ronitsabhaya75/Luxe-UI.git", from: "1.0.0")
+]
+
 ## License
 
 MIT License - feel free to use in your projects!
